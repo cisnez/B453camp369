@@ -22,7 +22,7 @@ Basecamp369 is a bot management project that aims to create a connection between
 
 ## Usage
 
-1. Add your OpenAI API key and Discord bot token to the `_tokens.yaml` file.
+1. Add your OpenAI API key and Discord bot token to the `___tokens___.yaml` file.
 2. Create a configuration file for each bot you want to use, following the naming convention `_init_{bot_name}.yaml`.
 3. Run the `main()` function in `Basecamp369.py`:
     `>>>python Basecamp369.py`

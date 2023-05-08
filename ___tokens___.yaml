@@ -1,0 +1,4 @@
+# DO NOT SHARE YOUR PRIVATE TOKENS
+# Keep them private. Safer to use environment variables.
+
+user_discord: "Discord Bot Token goes here."

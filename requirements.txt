@@ -1,0 +1,21 @@
+#requirements.txt
+
+# Core libraries
+aiohttp
+openai
+
+# Discord libraries
+discord
+Pillow
+
+# Machine learning and NLP libraries
+transformers
+torch
+emoji
+
+# Additional libraries for specific functionality
+diffusers
+scipy
+
+# Telegram API
+pyrogram
