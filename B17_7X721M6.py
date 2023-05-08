@@ -60,6 +60,11 @@ class TX721M6:
         #self.sd_pipe_txt2img.scheduler = KarrasVePipeline.from_config(self.unet_model, self.sd_pipe_txt2img.scheduler.config)       
 
     def generate_image(self, prompt):
+        # Generate new random seed, scale, and steps values
+        self.seed = random.randint(0, 2**32 - 1)
+        self.guidance_scale = random.randint(8, 16)
+        self.steps = random.randint(19, 29)
+
         generator = torch.Generator(device="cuda")
         generator.manual_seed(self.seed)
 
@@ -78,5 +83,7 @@ class TX721M6:
         txt_path = d474.save_details(prompt, self.seed, self.guidance_scale, self.steps)
 
         return self.seed, self.guidance_scale, self.steps, prompt, img_path, txt_path
+
+
 
     # You can add property getters and setters here for the required attributes

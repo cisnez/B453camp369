@@ -9,8 +9,19 @@ class D474:
 
     @staticmethod
     def generate_random_string():
-        # Your existing function to generate a random string
-        pass
+        # Get the current timestamp as a string
+        timestamp = str(time.time())
+        
+        # Create a SHA-256 hash object
+        hasher = hashlib.sha256()
+        
+        # Update the hash object with the timestamp
+        hasher.update(timestamp.encode('utf-8'))
+        
+        # Get the hexadecimal representation of the hash
+        random_string = hasher.hexdigest()
+        
+        return random_string
 
     def save_image(self, image):
         img_path = os.path.join(self.path, f"{self.filename}.{self.file_type}")
