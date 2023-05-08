@@ -22,12 +22,12 @@ Basecamp369 is a bot management project that aims to create a connection between
 4. Checkout the 'template-files' branch:
     `git checkout template-files`
 
-5. Copy the ___keys___.yaml and ___tokens___.yaml files to a temporary location outside the project directory.
+5. Copy the `___keys___.yaml` and `___tokens___.yaml` files to a temporary location outside the project directory.
 
 6. Checkout the 'main' branch:
     `git checkout main`
 
-7. Copy the ___keys___.yaml and ___tokens___.yaml files from the temporary location back into the project directory.
+7. Copy the `___keys___.yaml` and `___tokens___.yaml` files from the temporary location back into the project directory.
 
 8. Install the required dependencies:
     `pip install -r requirements.txt`
