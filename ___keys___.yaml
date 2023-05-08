@@ -1,4 +1,0 @@
-# DO NOT SHARE YOUR PRIVATE KEYS
-# Keep them private. Safer to use environment variables.
-
-openai_key: "Put your OpenAi API key here."
