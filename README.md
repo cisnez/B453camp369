@@ -12,29 +12,32 @@ Basecamp369 is a bot management project that aims to create a connection between
 ## Installation
 
 1. Ensure you have Python 3.8 or higher installed.
+
 2. Clone the repository:
     `git clone https://github.com/cisnez/8453camp369`
 
 3. Navigate to the project directory:
     `cd 8453camp369`
 
-4. Install the required dependencies:
-    `pip install -r requirements.txt`
-
-5. Switch to the `template-files` branch to access the template files for tokens and keys:
+4. Checkout the 'template-files' branch:
     `git checkout template-files`
 
-6. Copy the `___keys___.yaml` and `___tokens___.yaml` files to the root of the project directory. Make sure not to track these files in Git by adding them to the `.gitignore` file.
+5. Copy the ___keys___.yaml and ___tokens___.yaml files to a temporary location outside the project directory.
 
-7. Add your OpenAI API key and Discord bot token to the `___tokens___.yaml` file and any necessary keys to the `___keys___.yaml` file. Your custom tokens and keys will not be tracked by Git.
-
-8. Switch back to the `main` branch:
+6. Checkout the 'main' branch:
     `git checkout main`
+
+7. Copy the ___keys___.yaml and ___tokens___.yaml files from the temporary location back into the project directory.
+
+8. Install the required dependencies:
+    `pip install -r requirements.txt`
 
 ## Usage
 
-1. Add your OpenAI API key and Discord bot token to the `___tokens___.yaml` file.
-2. Create a configuration file for each bot you want to use, following the naming convention `_init_{bot_name}.yaml`.
+1. Add your OpenAI API key to the `___keys___.yaml` file and Discord bot tokens to the `___tokens___.yaml` file.
+
+2. Create a configuration file for each bot you want to use, following the naming convention `_init_{bot_name}.yaml`. The default bot is ``_init_user.yaml``
+
 3. Run the `main()` function in `8453camp369.py`:
     ```>>>python 8453camp369.py```
 
