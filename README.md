@@ -13,13 +13,23 @@ Basecamp369 is a bot management project that aims to create a connection between
 
 1. Ensure you have Python 3.8 or higher installed.
 2. Clone the repository:
-`git clone https://github.com/cisnez/8453camp369`
+    `git clone https://github.com/cisnez/8453camp369`
 
 3. Navigate to the project directory:
     `cd 8453camp369`
 
 4. Install the required dependencies:
     `pip install -r requirements.txt`
+
+5. Switch to the `template-files` branch to access the template files for tokens and keys:
+    `git checkout template-files`
+
+6. Copy the `___keys___.yaml` and `___tokens___.yaml` files to the root of the project directory. Make sure not to track these files in Git by adding them to the `.gitignore` file.
+
+7. Add your OpenAI API key and Discord bot token to the `___tokens___.yaml` file and any necessary keys to the `___keys___.yaml` file. Your custom tokens and keys will not be tracked by Git.
+
+8. Switch back to the `main` branch:
+    `git checkout main`
 
 ## Usage
 
