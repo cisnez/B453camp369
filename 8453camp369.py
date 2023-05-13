@@ -17,7 +17,7 @@ import runpy
 # Import bot constructor class(es) here
 from B07_B17 import B17
 #  (e.g. B17 is the Discord bit of the bot's abilities)
-from B17_D474 import D474FL45H
+from B17_6474 import D474FL45H
 
 # Constants for `Wake Up` game.
 ZIP = "219"

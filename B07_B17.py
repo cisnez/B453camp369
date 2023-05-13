@@ -2,11 +2,11 @@
 import openai
 from discord.ext import commands       # pip install discord
 from discord import Intents            # pip install discord
-from B17_7X721M6 import TX721M6
+from B17_TX721M6 import TX721M6
 from B17_D15C0RD import D15C0RD
 from B17_T3L36R4M import T3L36R4M
 from B17_M3554635 import M3554635
-from B17_D474 import D474FL45H
+from B17_6474 import D474FL45H
 from transformers import GPT2Tokenizer  # Import the tokenizer module
 
 tokenizer = GPT2Tokenizer.from_pretrained("gpt2")

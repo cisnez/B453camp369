@@ -1,4 +1,5 @@
-#B17_4W5.py
+#B17_AW5.py
+# (was B17_4W5.py , ren respects first letter of platform)
 import os
 import boto3
 from botocore.exceptions import NoCredentialsError
