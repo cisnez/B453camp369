@@ -9,6 +9,10 @@ nicknames:
   - "Build4B07#0001"
   - "Build A Bot"
 color: "cyan"
+
+#Telegram
+telegram_api_id: 
+
 intents:
   typing: false
   presences: false
@@ -16,14 +20,14 @@ intents:
   guilds: true
   members: true
   message_content: true
-bot_channel_id: 1
-self_channel_id: 1
-self_author_id: 9
+bot_channel_id: 
+self_channel_id: 
+self_author_id: 
 self_author_name: "Discord User Name here"
 home_channel_id: 
-other_channel_id: &other_channel_id 00000000000000008
-other_author_id: 00000000000000008
-hello_channel_id: 00000000000000008
+other_channel_id: &other_channel_id 
+other_author_id: 
+hello_channel_id: 
 allow_channel_ids:
 ignore_channel_ids:
  - *other_channel_id

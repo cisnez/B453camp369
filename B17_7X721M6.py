@@ -22,6 +22,12 @@ class TX721M6:
         img_width=512,
         img_height=512
     ):
+        # Add these lines to initialize the D474 object and set the path attribute
+        self.d474 = D474()
+        self.path = self.d474.path
+        self.filename = self.d474.filename
+        self.file_type = self.d474.file_type
+
         self.txt2img_repo_id = txt2img_repo_id
         self.scheduler_model_id = scheduler_model_id if scheduler_model_id is not None else txt2img_repo_id
         self.unet_repo_id = unet_repo_id
