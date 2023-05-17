@@ -10,7 +10,7 @@ sd_model_id = "danbrown/RPG-v4"
 device = "cuda"
 
 pipe = StableDiffusionPipeline.from_pretrained(
-    sd_model_id, variant="default", torch_dtype=torch.float32
+    sd_model_id, variant="default", torch_dtype=torch.float16
 )
 pipe = pipe.to(device)
 

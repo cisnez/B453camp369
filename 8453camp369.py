@@ -9,8 +9,9 @@
 import os
 import sys
 import asyncio
-from typing import List
+from typing import List, Dict
 import yaml
+import logging
 import openai
 import runpy
 
@@ -18,6 +19,10 @@ import runpy
 from B07_B17 import B17
 #  (e.g. B17 is the Discord bit of the bot's abilities)
 from B17_6474 import D474FL45H
+
+#logging.basicConfig(level=logging.INFO)
+#logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(filename='z.log', filemode='a', format='%(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 # Constants for `Wake Up` game.
 ZIP = "219"
@@ -46,6 +51,15 @@ def merge_yaml_files(file_paths):
                     merged_data[key] = value
     return merged_data
 
+def load_yaml_file(filename):
+    try:
+        with open(filename, 'r') as f:
+            return yaml.safe_load(f)
+    except FileNotFoundError:
+        logging.error(f"The file {filename} was not found.")
+    except yaml.YAMLError as e:
+        logging.error(f"Error parsing the file {filename}: {str(e)}")
+
 class Signal369:    # Bot Manager
     def __init__(self):
         self.bots = {}  # Stores bot instances
@@ -55,14 +69,12 @@ class Signal369:    # Bot Manager
 
     def load_keys(self):
         # Load keys from the ___keys___.yaml file
-        with open("___keys___.yaml", "r") as f:
-            self.keys = yaml.safe_load(f)
+        self.keys = load_yaml_file("___keys___.yaml")
 
     def load_tokens(self):
         # Load tokens from the ___tokens___.yaml file
-        with open("___tokens___.yaml", "r") as f:
-            self.tokens = yaml.safe_load(f)
-        
+        self.tokens = load_yaml_file("___tokens___.yaml")
+
     def get_available_bots(self) -> List[str]:
         yaml_files = [f for f in os.listdir() if f.startswith("_init_") and f.endswith(".yaml")]
         bot_names = [os.path.splitext(f)[0][6:] for f in yaml_files]
@@ -93,7 +105,7 @@ class Signal369:    # Bot Manager
             flash_data.set(f"Error: 'Signal369' object has no attribute 'tokens'. Please check the class definition. {str(e)}")
             return f"Error: 'Signal369' object has no attribute 'tokens'. Please check the class definition."
         finally:
-            print(f"Attempting to retrieve token for {bot_name}.")
+            logging.info(f"Attempting to retrieve token for {bot_name}.")
 
         try:
             openai_key = self.keys["openai_api_key"]
@@ -140,12 +152,12 @@ class Signal369:    # Bot Manager
     async def send_message(self, bot_name: str, message: str):
         bot = self.bots.get(bot_name)
         if bot is None:
-            print(f"Bot {bot_name} is not running.")
+            logging.info(f"Bot {bot_name} is not running.")
             return
         try:
             await bot.send_message(message)
         except Exception as e:
-            print(f"Error sending message with bot {bot_name}: {str(e)}")
+            logging.error(f"Error sending message with bot {bot_name}: {str(e)}")
 
 
     def get_running_bots(self) -> List[str]:
@@ -169,7 +181,8 @@ async def service_bot(bot_manager: Signal369, flash_data: D474FL45H):
 
         current_flash_data = flash_data.get_and_reset()
         if current_flash_data:
-            print(f"\n{current_flash_data}")
+            #print(f"\n{current_flash_data}")
+            logging.info(f"\n{current_flash_data}")
 
         choice = input("Enter your choice: ")
 
@@ -227,7 +240,8 @@ async def connect_bot(bot_manager: Signal369, flash_data: D474FL45H):
 
         flash_message = flash_data.get_and_reset()
         if flash_message:
-            print("Message: " + flash_message)
+            #print("Message: " + flash_message)
+            logging.info("Message: " + flash_message)
 
         choice = input("Enter your choice: ")
 
@@ -252,7 +266,7 @@ async def connect_bot(bot_manager: Signal369, flash_data: D474FL45H):
 def display_available_bots(bot_manager, flash_data: D474FL45H):
     available_bots = bot_manager.get_available_bots()
     if not available_bots:
-        print("No available bots.")
+        logging.error("No available bots.")
         flash_data.set("No available bots.")
         return None
     print("\nAvailable bots:")
@@ -283,7 +297,8 @@ async def main():
 
             flash_message = flash_data.get_and_reset()
             if flash_message:
-                print("Message: " + flash_message)
+                #print("Message: " + flash_message)
+                logging.info("Message: " + flash_message)
 
             choice = input("Enter your choice: ")
 
@@ -345,13 +360,16 @@ async def main():
 
             elif choice == "6":
                 current_flash_data = flash_data.get_and_reset()
-                print(f"Current flash_data: {current_flash_data}")  # Debug print
+                logging.debug(f"Current flash_data: {current_flash_data}")  # Debug print
+                # print(f"Current flash_data: {current_flash_data}")  # Debug print
                 bot_name = "your_bot_name"  # Replace with your actual bot name
                 if current_flash_data == ZIP:
-                    print("Sending ZAP message")  # Debug print
+                    # print("Sending ZAP message")  # Debug print
+                    logging.debug("Sending ZAP message")  # Debug print
                     await bot_manager.send_message(bot_name, ZAP)
                 elif current_flash_data == ZAP:
-                    print("Sending ZOP message")  # Debug print
+                    # print("Sending ZOP message")  # Debug print
+                    logging.debug("Sending ZOP message")  # Debug print
                     await bot_manager.send_message(bot_name, ZOP)
                 else:
                     flash_data.set("You Lost")
@@ -366,7 +384,8 @@ async def main():
                 sys.exit()
 
             else:
-                print("Invalid choice. Please try again.")
+                logging.warning("Invalid choice. Please try again.")
+                # print("Invalid choice. Please try again.")
 
         except Exception as e:
             flash_data.set(str(e))
