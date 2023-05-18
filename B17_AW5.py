@@ -1,30 +1,55 @@
 #B17_AW5.py
 # (was B17_4W5.py , ren respects first letter of platform)
-import os
 import boto3
-from botocore.exceptions import NoCredentialsError
+import logging
+from botocore.exceptions import NoCredentialsError, BotoCoreError
 
-class B17_4W5:
-    def __init__(self, aws_access_key_id, aws_secret_access_key, aws_region="us-east-1"):
+class AW5:
+    def __init__(self, aws_access_key_id, aws_secret_access_key, aws_region="us-west-1"):
         self.aws_access_key_id = aws_access_key_id
         self.aws_secret_access_key = aws_secret_access_key
         self.aws_region = aws_region
 
-        self.s3 = boto3.client(
-            "s3",
-            region_name=self.aws_region,
-            aws_access_key_id=self.aws_access_key_id,
-            aws_secret_access_key=self.aws_secret_access_key,
-        )
-
-    def save_to_s3(self, file_path, s3_bucket, s3_key):
         try:
-            self.s3.upload_file(file_path, s3_bucket, s3_key)
-            print(f"File uploaded to {s3_bucket}/{s3_key}")
+            self.s3 = boto3.client(
+                "s3",
+                region_name=self.aws_region,
+                aws_access_key_id=self.aws_access_key_id,
+                aws_secret_access_key=self.aws_secret_access_key,
+            )
+        except BotoCoreError as e:
+            logging.error(f"Failed to connect to AWS: {e}")
+            raise e
+
+    def upload_file_to_s3(self, file_path, bucket_name, s3_key):
+        try:
+            with open(file_path, "rb") as data:
+                self.s3.upload_fileobj(data, bucket_name, s3_key)
+            logging.info(f"File uploaded to {bucket_name}/{s3_key}")
         except FileNotFoundError:
-            print("The file was not found.")
+            logging.error("The file was not found.")
+            raise
         except NoCredentialsError:
-            print("Credentials not available")
+            logging.error("Credentials not available")
+            raise
+        except Exception as e:
+            logging.error(f"An error occurred: {e}")
+            raise e
+
+    def download_file_from_s3(self, bucket_name, s3_key, file_path):
+        try:
+            with open(file_path, "wb") as file:
+                self.s3.download_fileobj(bucket_name, s3_key, file)
+            logging.info(f"File downloaded from {bucket_name}/{s3_key}")
+        except FileNotFoundError:
+            logging.error("The file was not found.")
+            raise
+        except NoCredentialsError:
+            logging.error("Credentials not available")
+            raise
+        except Exception as e:
+            logging.error(f"An error occurred: {e}")
+            raise e
 
 # Here's the complete example of creating an instance of B17_4W5 with the required AWS credentials and passing it to the D474 class when needed:
 

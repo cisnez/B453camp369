@@ -7,6 +7,8 @@ from B17_D15C0RD import D15C0RD
 from B17_T3L36R4M import T3L36R4M
 from B17_M3554635 import M3554635
 from B17_6474 import D474FL45H
+import boto3
+from B17_AW5 import AW5
 from transformers import GPT2Tokenizer  # Import the tokenizer module
 
 tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
@@ -17,7 +19,7 @@ ZAP = "249"
 ZOP = "209"
 
 class B17(commands.Bot):
-    def __init__(self, openai_api_key, discord_token, telegram_api_id, telegram_api_hash, bot_init_data):
+    def __init__(self, openai_api_key, discord_token, telegram_api_id, telegram_api_hash, aws_secret_access_key, bot_init_data):
         # Store bot init data in this object for other objects to use.
         self.bot_init_data = bot_init_data
 
@@ -25,6 +27,17 @@ class B17(commands.Bot):
         self.nicknames = bot_init_data["nicknames"]
         self.color = bot_init_data["color"]
 
+        # Initialize the AWS bit here
+        self.aws_access_key_id = bot_init_data["aws_access_key_id"]
+        self.aws_secret_access_key = aws_secret_access_key
+        self.aws_bit = AW5(self.aws_access_key_id, self.aws_secret_access_key)
+        self.s3_bucket_name = "s3.cisnez.com"
+        self.s3_client = boto3.client(
+            's3',
+            aws_access_key_id=self.aws_access_key_id,
+            aws_secret_access_key=self.aws_secret_access_key
+        )
+    
         # Image dimensions for txt2img and img2img
         self.img_width = bot_init_data["img_width"]
         self.img_height = bot_init_data["img_height"]
@@ -86,7 +99,26 @@ class B17(commands.Bot):
         
         super().__init__(command_prefix=command_prefix, intents=intents)
 
-        async def start(self, token):
-            await self.run(token)
-            # Send a ZIP message to start the handshake
-            await self.discord_bot.message_queue.put(M3554635.Message(ZIP, "handshake"))
+    async def start(self, token):
+        await self.run(token)
+        # Send a ZIP message to start the handshake
+        await self.discord_bot.message_queue.put(M3554635.Message(ZIP, "handshake"))
+
+    async def test_s3(self):
+        test_filename = "test_file.txt"
+        test_content = "This is a test."
+        
+        # Assume s3_client is an instance of boto3's S3 client.
+        # The bot would need the appropriate AWS credentials to access S3.
+
+        # Write the file
+        self.s3_client.put_object(Body=test_content, Bucket=self.s3_bucket_name, Key=test_filename)
+
+        # Read the file back
+        s3_object = self.s3_client.get_object(Bucket=self.s3_bucket_name, Key=test_filename)
+        file_content = s3_object["Body"].read().decode()
+
+        if file_content == test_content:
+            return True  # The write and read both worked
+        else:
+            return False  # Something went wrong

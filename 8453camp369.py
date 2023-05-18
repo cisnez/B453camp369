@@ -88,41 +88,51 @@ class Signal369:    # Bot Manager
 
     async def start_bot(self, bot_name: str, flash_data: D474FL45H):
         # Retrieve bot configuration and token
-        #config_files = ["_init_{bot_name}.yaml", "_init__global.yaml"]
-        #{To ensure the bot's custom values overwrite the globals, 
-        # you would want to reverse the order of these config files like this: 
-        # config_files = ["_init__global.yaml", "_init_{bot_name}.yaml"]}.
         config_files = ["_init__global.yaml", f"_init_{bot_name}.yaml"]
         merged_config = merge_yaml_files(config_files)
         bot_init_data = merged_config
 
         try:
-            discord_token = self.tokens[f"{bot_name}_discord_token"]
-        except KeyError as e:
-            flash_data.set(f"Error: Unable to find the token for {bot_name}. Please check the ___tokens___.yaml file. {str(e)}")
-            return f"Error: Unable to find the token for {bot_name}. Please check the ___tokens___.yaml file."
+            discord_token = self.tokens.get(f"{bot_name}_discord_token")
+            if discord_token is None:
+                error_message = f"Error: Unable to find the token for {bot_name}. Please check the ___tokens___.yaml file."
+                flash_data.set(error_message)
+                logging.error(error_message)
         except AttributeError as e:
-            flash_data.set(f"Error: 'Signal369' object has no attribute 'tokens'. Please check the class definition. {str(e)}")
-            return f"Error: 'Signal369' object has no attribute 'tokens'. Please check the class definition."
+            error_message = f"Error: 'Signal369' object has no attribute 'tokens'. Please check the class definition. {str(e)}"
+            flash_data.set(error_message)
+            logging.error(error_message)
+            return error_message
         finally:
             logging.info(f"Attempting to retrieve token for {bot_name}.")
 
-        try:
-            openai_key = self.keys["openai_api_key"]
-        except KeyError as e:
-            flash_data.set(f"Error: Unable to find the token for {bot_name}. Please check the ___tokens___.yaml file. {str(e)}")
-            return f"Error: Unable to find the OpenAI key. Please check the ___keys__.yaml file."
+        aws_secret_access_key = self.keys.get(f"{bot_name}_aws_secret_access_key")
+        if aws_secret_access_key is None:
+            error_message = f"Error: Unable to find the AWS secret access key. Please check the ___keys__.yaml files."
+            flash_data.set(error_message)
+            logging.error(error_message)
 
-        # Fetch the Telegram api_id and api_hash
+        openai_key = self.keys.get("openai_api_key")
+        if openai_key is None:
+            error_message = f"Error: Unable to find the OpenAI key. Please check the ___keys__.yaml file."
+            flash_data.set(error_message)
+            logging.error(error_message)
+
         try:
-            telegram_api_id = bot_init_data["telegram_api_id"]
-            telegram_api_hash = self.keys[f"{bot_name}_telegram_api_hash"]
+            telegram_api_id = bot_init_data.get("telegram_api_id")
+            telegram_api_hash = self.keys.get(f"{bot_name}_telegram_api_hash")
+            if telegram_api_id is None or telegram_api_hash is None:
+                error_message = f"Error: Unable to find the Telegram api_id or api_hash. Please check the bot's configuration and the ___keys__.yaml files."
+                flash_data.set(error_message)
+                logging.error(error_message)
         except KeyError as e:
-            flash_data.set(f"Error: Unable to find the Telegram api_id or api_hash. Please check the bot's configuration and the ___keys__.yaml files. {str(e)}")
-            return f"Error: Unable to find the Telegram api_id or api_hash. Please check the bot's configuration and the ___keys__.yaml files."
+            error_message = f"Error: Unable to find the Telegram api_id or api_hash. Please check the bot's configuration and the ___keys__.yaml files. {str(e)}"
+            flash_data.set(error_message)
+            logging.error(error_message)
+            return error_message
 
         # Create and store the bot instance
-        bot = B17(openai_key, discord_token, telegram_api_id, telegram_api_hash, bot_init_data)
+        bot = B17(openai_key, discord_token, telegram_api_id, telegram_api_hash, aws_secret_access_key, bot_init_data)
         self.bots[bot_name] = bot
 
         # Start the bot as an asyncio task
@@ -131,8 +141,10 @@ class Signal369:    # Bot Manager
             self.bot_tasks[bot_name] = task
             flash_data.set(f'{bot_name} started successfully')
         except Exception as e:
-            flash_data.set(f"Error starting bot {bot_name}: {str(e)}")
-            return f"Error starting bot {bot_name}: {str(e)}"
+            error_message = f"Error starting bot {bot_name}: {str(e)}"
+            flash_data.set(error_message)
+            logging.error(error_message)
+            return error_message
 
     async def stop_bot(self, bot_name: str):
         bot = self.bots[bot_name]
@@ -159,7 +171,6 @@ class Signal369:    # Bot Manager
         except Exception as e:
             logging.error(f"Error sending message with bot {bot_name}: {str(e)}")
 
-
     def get_running_bots(self) -> List[str]:
         return list(self.bots.keys())
 
@@ -170,6 +181,45 @@ class Signal369:    # Bot Manager
     def configure_rpc_portmap(self):
         # Implement your RPC portmap configuration logic here
         pass
+
+async def tools_menu(bot_manager, flash_data: D474FL45H):
+    while True:
+        print("\nTools - Pirate Menu")
+        print("1. Horse Stable")
+        print("2. Flash World")
+        print("3. Test AWS for running bots")
+        print("4. Back to Main Menu")
+
+        flash_message = flash_data.get_and_reset()
+        if flash_message:
+            logging.info("Message: " + flash_message)
+
+        choice = input("Enter your choice: ")
+
+        if choice == "1":
+            print("Running Horse Stable...")
+            runpy.run_path("pirate_horse_stable.py")
+            flash_data.set("Horse Stable script completed.")
+            break
+        elif choice == "2":
+            flash_data.set("Hello World")
+            break
+        elif choice == "3":
+            running_bots = bot_manager.get_running_bots() # Modify this line
+            if running_bots:
+                print("\nTesting AWS for running bots:")
+                for i, bot_name in enumerate(running_bots, start=1):
+                    bot = bot_manager.bots[bot_name]  # Modify this line
+                    s3_test_result = await bot.test_s3()  # Test S3 for the bot
+                    if s3_test_result:
+                        flash_data.set(f"{i}. Bot {bot_name} can read from and write to S3 successfully.")
+                    else:
+                        flash_data.set(f"{i}. Bot {bot_name} failed the S3 read/write test.")
+                input("Press any key to return to the main menu...")
+        elif choice == "4":
+            break
+        else:
+            print("Invalid choice. Please try again.")
 
 async def service_bot(bot_manager: Signal369, flash_data: D474FL45H):
     while True:
@@ -288,33 +338,6 @@ async def main():
     bot_manager = Signal369()
     flash_data = D474FL45H()
 
-    async def tools_menu():
-        while True:
-            print("\nTools - Pirate Menu")
-            print("1. Horse Stable")
-            print("2. Flash World")
-            print("3. Back to Main Menu")
-
-            flash_message = flash_data.get_and_reset()
-            if flash_message:
-                #print("Message: " + flash_message)
-                logging.info("Message: " + flash_message)
-
-            choice = input("Enter your choice: ")
-
-            if choice == "1":
-                print("Running Horse Stable...")
-                runpy.run_path("pirate_horse_stable.py")
-                flash_data.set("Horse Stable script completed.")
-                break
-            elif choice == "2":
-                flash_data.set("Hello World")
-                break
-            elif choice == "3":
-                break
-            else:
-                print("Invalid choice. Please try again.")
-
     while True:
         #os.system('cls' if os.name == 'nt' else 'clear')
 
@@ -375,7 +398,7 @@ async def main():
                     flash_data.set("You Lost")
 
             elif choice == "7":
-                await tools_menu()
+                await tools_menu(bot_manager, flash_data)
 
             elif choice == "8":
                 pass

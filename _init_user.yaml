@@ -10,6 +10,9 @@ nicknames:
   - "Build A Bot"
 color: "cyan"
 
+#AWS
+aws_access_key_id: ""
+
 #Telegram
 telegram_api_id: 
 
