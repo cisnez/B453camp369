@@ -12,17 +12,18 @@ import asyncio
 from typing import List, Dict
 import yaml
 import logging
-import openai
 import runpy
 
 # Import bot constructor class(es) here
-from B07_B17 import B17
-#  (e.g. B17 is the Discord bit of the bot's abilities)
-from B17_6474 import D474FL45H
+from B07 import B07
+from B07_D474 import D474
 
 #logging.basicConfig(level=logging.INFO)
 #logging.basicConfig(level=logging.DEBUG)
-logging.basicConfig(filename='z.log', filemode='a', format='%(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
+logging.basicConfig(filename='z.log', 
+                    filemode='a', 
+                    format='%(asctime)s - %(levelname)s - %(message)s',
+                    level=logging.INFO)
 
 # Constants for `Wake Up` game.
 ZIP = "219"
@@ -86,7 +87,7 @@ class Signal369:    # Bot Manager
 
         return available_bots
 
-    async def start_bot(self, bot_name: str, flash_data: D474FL45H):
+    async def start_bot(self, bot_name: str, flash_data: D474):
         # Retrieve bot configuration and token
         config_files = ["_init__global.yaml", f"_init_{bot_name}.yaml"]
         merged_config = merge_yaml_files(config_files)
@@ -132,7 +133,7 @@ class Signal369:    # Bot Manager
             return error_message
 
         # Create and store the bot instance
-        bot = B17(openai_key, discord_token, telegram_api_id, telegram_api_hash, aws_secret_access_key, bot_init_data)
+        bot = B07(openai_key, discord_token, telegram_api_id, telegram_api_hash, aws_secret_access_key, bot_init_data)
         self.bots[bot_name] = bot
 
         # Start the bot as an asyncio task
@@ -152,7 +153,7 @@ class Signal369:    # Bot Manager
         del self.bots[bot_name]
         del self.bot_tasks[bot_name]
 
-    async def restart_bot(self, bot_name: str, flash_data: D474FL45H):
+    async def restart_bot(self, bot_name: str, flash_data: D474):
         await self.stop_bot(bot_name)
         await self.start_bot(bot_name, flash_data)
     
@@ -182,13 +183,14 @@ class Signal369:    # Bot Manager
         # Implement your RPC portmap configuration logic here
         pass
 
-async def tools_menu(bot_manager, flash_data: D474FL45H):
+async def tools_menu(bot_manager, flash_data: D474):
     while True:
         print("\nTools - Pirate Menu")
         print("1. Horse Stable")
         print("2. Flash World")
         print("3. Test AWS for running bots")
         print("4. Back to Main Menu")
+        print("5. Move files to S3.") 
 
         flash_message = flash_data.get_and_reset()
         if flash_message:
@@ -207,21 +209,33 @@ async def tools_menu(bot_manager, flash_data: D474FL45H):
         elif choice == "3":
             running_bots = bot_manager.get_running_bots() # Modify this line
             if running_bots:
-                print("\nTesting AWS for running bots:")
+                logging.info("\nTesting AWS for running bots:")
                 for i, bot_name in enumerate(running_bots, start=1):
                     bot = bot_manager.bots[bot_name]  # Modify this line
                     s3_test_result = await bot.test_s3()  # Test S3 for the bot
                     if s3_test_result:
-                        flash_data.set(f"{i}. Bot {bot_name} can read from and write to S3 successfully.")
+                        result =f"{i}. Bot {bot_name} can read from and write to S3 successfully."
+                        flash_data.set(result)
+                        logging.info(result)
                     else:
-                        flash_data.set(f"{i}. Bot {bot_name} failed the S3 read/write test.")
+                        result = f"{i}. Bot {bot_name} failed the S3 read/write test."
+                        flash_data.set(result)
+                        logging.info(result)
                 input("Press any key to return to the main menu...")
         elif choice == "4":
             break
+        elif choice == "5":
+            running_bots = bot_manager.get_running_bots()
+            if running_bots:
+                logging.info("\nMoving files to S3 for running bots:")
+                for i, bot_name in enumerate(running_bots, start=1):
+                    bot = bot_manager.bots[bot_name]
+                    await bot.move_files_to_s3()
+                    logging.info(f"{i}. Bot {bot_name} moved files to S3.")
         else:
-            print("Invalid choice. Please try again.")
+            logging.info("Invalid choice. Please try again.")
 
-async def service_bot(bot_manager: Signal369, flash_data: D474FL45H):
+async def service_bot(bot_manager: Signal369, flash_data: D474):
     while True:
         print("\nService Menu")
         print("1. Start a bot")
@@ -281,7 +295,7 @@ async def service_bot(bot_manager: Signal369, flash_data: D474FL45H):
         except Exception as e:
             flash_data.set(str(e))
 
-async def connect_bot(bot_manager: Signal369, flash_data: D474FL45H):
+async def connect_bot(bot_manager: Signal369, flash_data: D474):
     while True:
         print("\nConnect Bot Menu")
         print("1. Discord")
@@ -313,7 +327,7 @@ async def connect_bot(bot_manager: Signal369, flash_data: D474FL45H):
         except Exception as e:
             flash_data.set(str(e))
 
-def display_available_bots(bot_manager, flash_data: D474FL45H):
+def display_available_bots(bot_manager, flash_data: D474):
     available_bots = bot_manager.get_available_bots()
     if not available_bots:
         logging.error("No available bots.")
@@ -336,7 +350,7 @@ def display_available_bots(bot_manager, flash_data: D474FL45H):
 
 async def main():
     bot_manager = Signal369()
-    flash_data = D474FL45H()
+    flash_data = D474()
 
     while True:
         #os.system('cls' if os.name == 'nt' else 'clear')

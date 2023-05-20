@@ -1,4 +1,7 @@
 #B07_B17.py
+# Bit Manager
+
+import logging
 import openai
 from discord.ext import commands       # pip install discord
 from discord import Intents            # pip install discord
@@ -6,8 +9,9 @@ from B17_TX721M6 import TX721M6
 from B17_D15C0RD import D15C0RD
 from B17_T3L36R4M import T3L36R4M
 from B17_M3554635 import M3554635
-from B17_6474 import D474FL45H
+from B07_D474 import D474
 import boto3
+from botocore.exceptions import NoCredentialsError
 from B17_AW5 import AW5
 from transformers import GPT2Tokenizer  # Import the tokenizer module
 
@@ -18,7 +22,7 @@ ZIP = "219"
 ZAP = "249"
 ZOP = "209"
 
-class B17(commands.Bot):
+class B17():
     def __init__(self, openai_api_key, discord_token, telegram_api_id, telegram_api_hash, aws_secret_access_key, bot_init_data):
         # Store bot init data in this object for other objects to use.
         self.bot_init_data = bot_init_data
@@ -27,16 +31,18 @@ class B17(commands.Bot):
         self.nicknames = bot_init_data["nicknames"]
         self.color = bot_init_data["color"]
 
-        # Initialize the AWS bit here
-        self.aws_access_key_id = bot_init_data["aws_access_key_id"]
-        self.aws_secret_access_key = aws_secret_access_key
-        self.aws_bit = AW5(self.aws_access_key_id, self.aws_secret_access_key)
-        self.s3_bucket_name = "s3.cisnez.com"
-        self.s3_client = boto3.client(
-            's3',
-            aws_access_key_id=self.aws_access_key_id,
-            aws_secret_access_key=self.aws_secret_access_key
-        )
+        # Initialize the AWS bit here or local "bucket" if not initialized
+        self.local_bucket_path = "/source"
+        self.aws_bucket_path = "s3://s3.cisnez.com"
+        try:
+            self.aws_access_key_id = bot_init_data["aws_access_key_id"]
+            self.aws_secret_access_key = aws_secret_access_key
+            self.aws_bit = AW5(self.aws_access_key_id, self.aws_secret_access_key)
+            self.storage_path = self.aws_bucket_path
+        except NoCredentialsError:
+            logging.error("Invalid AWS credentials provided. Falling back to local file system.")
+            self.aws_bit = None
+            self.storage_path = self.local_bucket_path
     
         # Image dimensions for txt2img and img2img
         self.img_width = bot_init_data["img_width"]
@@ -53,8 +59,8 @@ class B17(commands.Bot):
         # Create a message queue object
         self.message_queue = M3554635()
 
-        # create a D474FL45H instance
-        self.flash_data = D474FL45H()
+        # set the D474 instance reference
+        self.flash_data = D474()
 
         # Initialize the Discord bit here
         self.discord_token = discord_token
@@ -99,6 +105,17 @@ class B17(commands.Bot):
         
         super().__init__(command_prefix=command_prefix, intents=intents)
 
+    def manage_bits(self):
+        # Instantiate all bits unless they were set `False` by B07
+        if self.aws_bit is not None:
+            try:
+                self.test_s3()
+            except Exception as e:
+                logging.error(f"Failed to connect to AWS: {str(e)}")
+                self.aws_bit = None
+
+        # Additional code to manage the other bits (txt2img, OpenAI, Discord, Telegram) would follow a similar pattern
+
     async def start(self, token):
         await self.run(token)
         # Send a ZIP message to start the handshake
@@ -108,17 +125,16 @@ class B17(commands.Bot):
         test_filename = "test_file.txt"
         test_content = "This is a test."
         
-        # Assume s3_client is an instance of boto3's S3 client.
-        # The bot would need the appropriate AWS credentials to access S3.
-
         # Write the file
-        self.s3_client.put_object(Body=test_content, Bucket=self.s3_bucket_name, Key=test_filename)
+        self.aws_bit.s3.put_object(Body=test_content, Bucket=self.storage_path, Key=test_filename)
 
         # Read the file back
-        s3_object = self.s3_client.get_object(Bucket=self.s3_bucket_name, Key=test_filename)
+        s3_object = self.aws_bit.s3.get_object(Bucket=self.storage_path, Key=test_filename)
         file_content = s3_object["Body"].read().decode()
 
         if file_content == test_content:
+            logging.info("The write and read both worked")
             return True  # The write and read both worked
         else:
+            logging.error("Something went wrong")
             return False  # Something went wrong

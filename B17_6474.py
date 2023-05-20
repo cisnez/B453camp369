@@ -2,6 +2,7 @@
 import os
 import hashlib
 import time
+from pathlib import Path
 
 class D474:
     def __init__(self, path="/source/_img_/", filename=None, file_type="jpg", aws_helper=None):
@@ -9,6 +10,7 @@ class D474:
         self.filename = filename if filename is not None else self.timestamp2sha256()
         self.file_type = file_type
         self.aws_helper = aws_helper
+        self._flashdata = None
 
     @staticmethod
     def timestamp2sha256():
@@ -31,7 +33,7 @@ class D474:
         image.save(img_path)
 
         if self.aws_helper and s3_bucket and s3_key:
-            self.aws_helper.save_to_s3(img_path, s3_bucket, s3_key)
+            self.aws_helper.write_s3(img_path, s3_bucket, s3_key)
 
         return img_path
 
@@ -44,35 +46,46 @@ class D474:
             f.write(f"Prompt: {prompt}\n")
 
         if self.aws_helper and s3_bucket and s3_key:
-            self.aws_helper.save_to_s3(txt_path, s3_bucket, s3_key)
+            self.aws_helper.write_s3(txt_path, s3_bucket, s3_key)
 
         return txt_path
+        
+    async def move_files_to_s3(self, bot):
+        # Specify the source and target directories
+        src_dir = Path(bot.local_bucket_path + "/_img_/2023")
+        target_dir = "_img_/2023"
+
+        # For each day in the year
+        for month in range(1, 13):
+            for day in range(1, 32):
+
+                # Build the path to the daily folder
+                daily_folder = src_dir / f"{month:02d}" / f"{day:02d}"
+
+                # If the daily folder exists
+                if daily_folder.exists():
+
+                    # For each .jpg file in the daily folder
+                    for jpg_file in daily_folder.glob("*.jpg"):
+
+                        # Make sure there's a corresponding .txt file
+                        txt_file = jpg_file.with_suffix('.txt')
+                        if txt_file.exists():
+
+                            # Rename the files based on the hash of the .jpg file's creation time
+                            new_filename = D474.timestamp2sha256(jpg_file.stat().st_ctime)
+                            jpg_file.rename(jpg_file.with_name(new_filename))
+                            txt_file.rename(txt_file.with_name(new_filename))
+
+                            # Define the target paths
+                            s3_key_jpg = f"{target_dir}/{month:02d}/{day:02d}/{new_filename}.jpg"
+                            s3_key_txt = f"{target_dir}/{month:02d}/{day:02d}/{new_filename}.txt"
+
+                            # Move the files to S3
+                            bot.aws_bit.write_s3(str(jpg_file), bot.aws_bucket_path, s3_key_jpg)
+                            bot.aws_bit.write_s3(str(txt_file), bot.aws_bucket_path, s3_key_txt)
 
     def get_full_filename(self, file_type=None):
         if file_type is None:
             file_type = self.file_type
         return os.path.join(self.path, f"{self.filename}.{file_type}")
-
-class D474FL45H:
-    def __init__(self):
-        self._flashdata = None
-
-    def set(self, data):
-        color_on = "\033[31m"
-        color_off = "\033[0m"
-        self._flashdata = color_on + data + color_off
-
-    def get_and_reset(self):
-        data = self._flashdata if self._flashdata is not None else ""
-        self._flashdata = None
-        return data
-
-    # # ANSI escape codes for the primary (basic) colors:
-    # Black: \033[30m
-    # Red: \033[31m
-    # Green: \033[32m
-    # Yellow: \033[33m
-    # Blue: \033[34m
-    # Magenta: \033[35m
-    # Cyan: \033[36m
-    # White: \033[37m

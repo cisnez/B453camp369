@@ -1,5 +1,4 @@
 #B17_AW5.py
-# (was B17_4W5.py , ren respects first letter of platform)
 import boto3
 import logging
 from botocore.exceptions import NoCredentialsError, BotoCoreError
@@ -21,14 +20,11 @@ class AW5:
             logging.error(f"Failed to connect to AWS: {e}")
             raise e
 
-    def upload_file_to_s3(self, file_path, bucket_name, s3_key):
+    def write_s3(self, path, filename, data):
         try:
-            with open(file_path, "rb") as data:
-                self.s3.upload_fileobj(data, bucket_name, s3_key)
+            bucket_name, s3_key = self._get_bucket_and_key(path, filename)
+            self.s3.put_object(Body=data, Bucket=bucket_name, Key=s3_key)
             logging.info(f"File uploaded to {bucket_name}/{s3_key}")
-        except FileNotFoundError:
-            logging.error("The file was not found.")
-            raise
         except NoCredentialsError:
             logging.error("Credentials not available")
             raise
@@ -36,14 +32,13 @@ class AW5:
             logging.error(f"An error occurred: {e}")
             raise e
 
-    def download_file_from_s3(self, bucket_name, s3_key, file_path):
+    def read_s3(self, path, filename):
         try:
-            with open(file_path, "wb") as file:
-                self.s3.download_fileobj(bucket_name, s3_key, file)
+            bucket_name, s3_key = self._get_bucket_and_key(path, filename)
+            response = self.s3.get_object(Bucket=bucket_name, Key=s3_key)
+            data = response['Body'].read()
             logging.info(f"File downloaded from {bucket_name}/{s3_key}")
-        except FileNotFoundError:
-            logging.error("The file was not found.")
-            raise
+            return data
         except NoCredentialsError:
             logging.error("Credentials not available")
             raise
@@ -51,104 +46,65 @@ class AW5:
             logging.error(f"An error occurred: {e}")
             raise e
 
-# Here's the complete example of creating an instance of B17_4W5 with the required AWS credentials and passing it to the D474 class when needed:
+    def delete_s3(self, path, filename):
+        try:
+            bucket_name, s3_key = self._get_bucket_and_key(path, filename)
+            self.s3.delete_object(Bucket=bucket_name, Key=s3_key)
+            logging.info(f"File deleted from {bucket_name}/{s3_key}")
+        except NoCredentialsError:
+            logging.error("Credentials not available")
+            raise
+        except Exception as e:
+            logging.error(f"An error occurred: {e}")
+            raise e
 
-# --- python code ---
-# aws_helper = B17_4W5(
-#     aws_access_key_id="your_aws_access_key_id",
-#     aws_secret_access_key="your_aws_secret_access_key",
-#     aws_region="your_aws_region",
-# )
+    def _get_bucket_and_key(self, path, filename):
+        # Here I'm assuming that the path format is /bucketname/keypath
+        bucket_name = path.parts[1]
+        key_parts = list(path.parts[2:]) + [filename]
+        s3_key = "/".join(key_parts)
+        return bucket_name, s3_key
 
-# d474 = D474(
-#     path="your/local/path",
-#     filename="your_filename",
-#     file_type="jpg",
-#     aws_helper=aws_helper
-# )
+# It appears you're trying to use `self.s3_client` and `self.move_files_to_s3` from the `B17` class, but these attributes and methods aren't defined in that class. 
 
-# # When saving an image or details, you can now pass the S3 bucket and S3 key to save the file to S3
-# image = ... # Your image object
-# s3_bucket = "your-s3-bucket-name"
-# s3_key = "your/s3/key.jpg"
+# Here's how you can address the issues:
 
-# d474.save_image(image, s3_bucket=s3_bucket, s3_key=s3_key)
-
-# prompt = "your_prompt"
-# seed = 123
-# guidance_scale = 0.5
-# steps = 10
-# s3_key = "your/s3/key.txt"
-
-# d474.save_details(prompt, seed, guidance_scale, steps, s3_bucket=s3_bucket, s3_key=s3_key)
-# This approach allows you to use the D474 class without AWS credentials when they are not needed. If you want to save files to an S3 bucket, you can create an instance of B17_4W5 with the required credentials and pass it to the D474 class.
-
-# I apologize for the confusion. I misunderstood your requirements and provided a solution that doesn't work with Discord. Unfortunately, there is no direct method to hide the text file preview while sending it as an attachment in Discord.
-
-# However, there's a workaround that we can use. Instead of sending the text file as an attachment, we can store the text file on a server or a cloud service like AWS S3, and provide a link to the text file. The link to the text file can then be included in the embed message.
-
-# Here's an example of how to achieve this using an AWS S3 bucket:
-
-# 1. First, you need to set up an AWS S3 bucket and configure the required permissions. You can follow this guide: https://docs.aws.amazon.com/AmazonS3/latest/userguide/creating-bucket.html
-
-# 2. Install the AWS SDK for Python (Boto3) by running:
-
-# ```bash
-# pip install boto3
+# 1. If `s3_client` is a part of `AW5` class, you should use it like this:
+# ```python
+# self.aws_bit.s3_client
 # ```
+# So, the `test_s3` method in `B17` class should be like this:
+# ```python
+#     async def test_s3(self):
+#         test_filename = "test_file.txt"
+#         test_content = "This is a test."
+        
+#         # Write the file
+#         self.aws_bit.s3_client.put_object(Body=test_content, Bucket=self.storage_path, Key=test_filename)
 
-# 3. Configure your AWS credentials by following this guide: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/quickstart.html#configuration
+#         # Read the file back
+#         s3_object = self.aws_bit.s3_client.get_object(Bucket=self.storage_path, Key=test_filename)
+#         file_content = s3_object["Body"].read().decode()
 
-# 4. Modify your code to upload the text file to the S3 bucket and generate a link:
+#         if file_content == test_content:
+#             return True  # The write and read both worked
+#         else:
+#             return False  # Something went wrong
+# ```
+# 2. Regarding `self.move_files_to_s3`, you have not implemented this method in the `B17` class. You should define this method in the `B17` class similar to `test_s3` method if you want to use it. The implementation of this method depends on how you want to move files to S3. Generally, you could use `put_object` or `upload_file` functions of `s3_client` to upload a file to S3.
+
+# Here's an example of how you might implement `move_files_to_s3`:
 
 # ```python
-# import boto3
+#     async def move_files_to_s3(self):
+#         # assuming you have a list of files to upload
+#         files_to_upload = ["file1.txt", "file2.txt"]
 
-# class D15B17:
-#     # ... existing methods ...
-
-#     def upload_to_s3(self, local_path, s3_key):
-#         s3 = boto3.client('s3')
-#         bucket_name = 'your-bucket-name'  # Replace with your bucket name
-#         s3.upload_file(local_path, bucket_name, s3_key)
-#         return f'https://{bucket_name}.s3.amazonaws.com/{s3_key}'
-
-# # ... rest of the code ...
-
-# elif message.content.startswith('.art'):
-#     # ... existing code ...
-
-#     try:
-#         seed, guidance_scale, steps, full_prompt, image_path, txt_path = self.txt2img_bit.generate_image(full_prompt)
-#         print(f'generate_image returned\ntxt_path: {txt_path}')
-#     except Exception as e:
-#         content = f"Error generating image: {e}"
-#         await message.channel.send(content=content)
-#         print(content)
-#         return
-
-#     try:
-#         d474_image = D474(path=self.txt2img_bit.path, filename=self.txt2img_bit.filename, file_type="jpg")
-#         d474_txt = D474(path=self.txt2img_bit.path, filename=self.txt2img_bit.filename, file_type="txt")
-
-#         with open(image_path, "rb") as img_file:
-#             content = "Art is the expression of the soul!"
-#             image_file = discord.File(img_file, d474_image.get_full_filename())
-
-#             # Upload the text file to S3 and generate a link
-#             txt_s3_link = self.upload_to_s3(txt_path, d474_txt.get_full_filename())
-
-#             # Create an embed with the image, title, and a link to the text file
-#             embed = discord.Embed(title=content, description=f'[Download text file]({txt_s3_link})')
-#             embed.set_image(url=f"attachment://{d474_image.get_full_filename()}")
-
-#             # Send the embed and image file
-#             await message.channel.send(embed=embed, files=[image_file])
-#     except Exception as e:
-#         content = f"Error generating image: {e}"
-#         await message.channel.send(content=content)
-#         print(content)
-#         return
+#         for filename in files_to_upload:
+#             with open(filename, "rb") as data:
+#                 self.aws_bit.s3_client.put_object(Body=data, Bucket=self.storage_path, Key=filename)
 # ```
 
-# This code will upload the text file to an S3 bucket and provide a link to the text file in the embed message. Users can click the link to download the text file without it being shown as a preview in the message. Remember to replace `'your-bucket-name'` with the name of your S3 bucket.
+# In this example, we're uploading files listed in `files_to_upload` from your local system to S3. Replace `files_to_upload` with the actual list of files you want to upload.
+
+# Please note that error handling is not included in these code snippets, so you might want to add appropriate error handling depending on your needs.
