@@ -1,8 +1,7 @@
 # _init__global.yaml
-command_prefix: 
+command_prefix: ""
 ignored_prefixes:
   - "rpg"
-  - "/"
 nicknames:
   - "Y4ML807"
 allow_author_ids:
