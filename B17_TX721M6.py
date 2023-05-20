@@ -7,7 +7,7 @@ from diffusers import (
     DPMSolverMultistepScheduler,
     #UNet2DModel,
 )
-from B17_6474 import D474
+from B17_D474 import D474
 
 class TX721M6:
     def __init__(
