@@ -10,127 +10,96 @@ import os
 import sys
 import asyncio
 from typing import List, Dict
-import yaml
-import logging
 import runpy
 
 # Import bot constructor class(es) here
 from B07 import B07
 from B07_D474 import D474
 
-#logging.basicConfig(level=logging.INFO)
-#logging.basicConfig(level=logging.DEBUG)
-logging.basicConfig(filename='z.log', 
-                    filemode='a', 
-                    format='%(asctime)s - %(levelname)s - %(message)s',
-                    level=logging.INFO)
-
-# Constants for `Wake Up` game.
-ZIP = "219"
-ZAP = "249"
-ZOP = "209"
-
-def merge_yaml_files(file_paths):
-    merged_data = {}
-    for file_path in file_paths:
-        with open(file_path, "r", encoding='utf-8') as f:
-            data = yaml.safe_load(f)
-            for key, value in data.items():
-                if value is None:  # If the value is None, do nothing.
-                    pass
-                elif isinstance(value, list):
-                    if key not in merged_data or merged_data[key] is None:
-                        merged_data[key] = value
-                    else:
-                        merged_data[key] += value
-                elif isinstance(value, dict):
-                    if key not in merged_data or merged_data[key] is None:
-                        merged_data[key] = value
-                    else:
-                        merged_data[key].update(value)
-                else:  # If the value is not None, list, or dict, replace the existing value.
-                    merged_data[key] = value
-    return merged_data
-
-def load_yaml_file(filename):
-    try:
-        with open(filename, 'r') as f:
-            return yaml.safe_load(f)
-    except FileNotFoundError:
-        logging.error(f"The file {filename} was not found.")
-    except yaml.YAMLError as e:
-        logging.error(f"Error parsing the file {filename}: {str(e)}")
+# # Constants for `Wake Up` game.
+# ZIP = "219"
+# ZAP = "249"
+# ZOP = "209"
 
 class Signal369:    # Bot Manager
-    def __init__(self):
+    def __init__(self, bot_data: D474):
         self.bots = {}  # Stores bot instances
         self.bot_tasks = {}  # Stores asyncio tasks for each bot
+        self.bot_data = bot_data  # Instance of D474 from B07_D474.py
         self.load_keys()
         self.load_tokens()
 
     def load_keys(self):
         # Load keys from the ___keys___.yaml file
-        self.keys = load_yaml_file("___keys___.yaml")
+        self.keys = self.bot_data.load_yaml_file("___keys___.yaml")
+        self.bot_data.set_flash('debug', 'Keys loaded from YAML')
 
     def load_tokens(self):
         # Load tokens from the ___tokens___.yaml file
-        self.tokens = load_yaml_file("___tokens___.yaml")
+        self.tokens = self.bot_data.load_yaml_file("___tokens___.yaml")
+        self.bot_data.set_flash('debug', 'Tokens loaded from YAML')
 
     def get_available_bots(self) -> List[str]:
         yaml_files = [f for f in os.listdir() if f.startswith("_init_") and f.endswith(".yaml")]
         bot_names = [os.path.splitext(f)[0][6:] for f in yaml_files]
 
-        with open("___tokens___.yaml", "r") as f:
-            tokens_data = yaml.safe_load(f)
+        tokens_data = self.bot_data.load_yaml_file("___tokens___.yaml")
 
         available_bots = [bot_name for bot_name in bot_names if f"{bot_name}_discord_token" in tokens_data]
 
         return available_bots
 
-    async def start_bot(self, bot_name: str, flash_data: D474):
+    async def start_bot(self, bot_name: str):
         # Retrieve bot configuration and token
         config_files = ["_init__global.yaml", f"_init_{bot_name}.yaml"]
-        merged_config = merge_yaml_files(config_files)
+        merged_config = self.bot_data.merge_yaml_files(config_files)
         bot_init_data = merged_config
+
+        discord_token = None
+        aws_secret_access_key = None
+        openai_key = None
+        telegram_api_id = None
+        telegram_api_hash = None
 
         try:
             discord_token = self.tokens.get(f"{bot_name}_discord_token")
-            if discord_token is None:
-                error_message = f"Error: Unable to find the token for {bot_name}. Please check the ___tokens___.yaml file."
-                flash_data.set(error_message)
-                logging.error(error_message)
-        except AttributeError as e:
-            error_message = f"Error: 'Signal369' object has no attribute 'tokens'. Please check the class definition. {str(e)}"
-            flash_data.set(error_message)
-            logging.error(error_message)
-            return error_message
-        finally:
-            logging.info(f"Attempting to retrieve token for {bot_name}.")
-
-        aws_secret_access_key = self.keys.get(f"{bot_name}_aws_secret_access_key")
-        if aws_secret_access_key is None:
-            error_message = f"Error: Unable to find the AWS secret access key. Please check the ___keys__.yaml files."
-            flash_data.set(error_message)
-            logging.error(error_message)
-
-        openai_key = self.keys.get("openai_api_key")
-        if openai_key is None:
-            error_message = f"Error: Unable to find the OpenAI key. Please check the ___keys__.yaml file."
-            flash_data.set(error_message)
-            logging.error(error_message)
-
-        try:
+            aws_secret_access_key = self.keys.get(f"{bot_name}_aws_secret_access_key")
+            openai_key = self.keys.get("openai_api_key")
             telegram_api_id = bot_init_data.get("telegram_api_id")
             telegram_api_hash = self.keys.get(f"{bot_name}_telegram_api_hash")
-            if telegram_api_id is None or telegram_api_hash is None:
-                error_message = f"Error: Unable to find the Telegram api_id or api_hash. Please check the bot's configuration and the ___keys__.yaml files."
-                flash_data.set(error_message)
-                logging.error(error_message)
-        except KeyError as e:
-            error_message = f"Error: Unable to find the Telegram api_id or api_hash. Please check the bot's configuration and the ___keys__.yaml files. {str(e)}"
-            flash_data.set(error_message)
-            logging.error(error_message)
+
+        except AttributeError as e:
+            error_message = f"A property is missing for {bot_name}. Please check the bot's configuration, and the keys and tokens yaml files. {str(e)}"
+            self.bot_data.set_flash('error', error_message)
             return error_message
+        except KeyError as e:
+            error_message = f"A property is missing for {bot_name}. Please check the bot's configuration, and the keys and tokens yaml files. {str(e)}"
+            self.bot_data.set_flash('error', error_message)
+            return error_message
+        else:
+            if discord_token is None:
+                warning_message = f"The discord_token is set to None for {bot_name}. Please check the ___tokens__.yaml file."
+                self.bot_data.set_flash('warning', warning_message)
+            else:
+                self.bot_data.set_flash('info', f"Retrieved discord_token for {bot_name}.")
+
+            if aws_secret_access_key is None:
+                warning_message = f"The aws_secret_access_key is set to None for {bot_name}. Please check the ___keys__.yaml file."
+                self.bot_data.set_flash('warning', warning_message)
+            else:
+                self.bot_data.set_flash('info', f"Retrieved aws_secret_access_key for {bot_name}.")
+
+            if openai_key is None:
+                warning_message = f"The openai_api_key is set to None for {bot_name}. Please check the ___keys__.yaml file."
+                self.bot_data.set_flash('warning', warning_message)
+            else:
+                self.bot_data.set_flash('info', f"Retrieved openai_api_key for {bot_name}.")
+
+            if telegram_api_id is None or telegram_api_hash is None:
+                warning_message = f"The Telegram api_id or api_hash is set to None for {bot_name}. Please check the _init_{bot_name}.yaml and the ___keys__.yaml files."
+                self.bot_data.set_flash('warning', warning_message)
+            else:
+                self.bot_data.set_flash('info', f"Retrieved Telegram api_id and api_hash for {bot_name}.")
 
         # Create and store the bot instance
         bot = B07(openai_key, discord_token, telegram_api_id, telegram_api_hash, aws_secret_access_key, bot_init_data)
@@ -138,13 +107,12 @@ class Signal369:    # Bot Manager
 
         # Start the bot as an asyncio task
         try:
-            task = asyncio.create_task(bot.start(discord_token))
+            task = asyncio.create_task(bot.start())
             self.bot_tasks[bot_name] = task
-            flash_data.set(f'{bot_name} started successfully')
+            self.bot_data.set_flash('info', f'{bot_name} started successfully')
         except Exception as e:
             error_message = f"Error starting bot {bot_name}: {str(e)}"
-            flash_data.set(error_message)
-            logging.error(error_message)
+            self.bot_data.set_flash('error', error_message)
             return error_message
 
     async def stop_bot(self, bot_name: str):
@@ -152,26 +120,18 @@ class Signal369:    # Bot Manager
         await bot.close()
         del self.bots[bot_name]
         del self.bot_tasks[bot_name]
+        self.bot_data.set_flash('info', f'Bot `{bot_name}` Stopped')
 
-    async def restart_bot(self, bot_name: str, flash_data: D474):
+    async def restart_bot(self, bot_name: str):
         await self.stop_bot(bot_name)
-        await self.start_bot(bot_name, flash_data)
-    
+        await self.start_bot(bot_name)
+        self.bot_data.set_flash('info', f'Bot `{bot_name}` Restarted')
+
     async def wait_for_bots(self):
         tasks = list(self.bot_tasks.values())
         if tasks:
             await asyncio.gather(*tasks)
     
-    async def send_message(self, bot_name: str, message: str):
-        bot = self.bots.get(bot_name)
-        if bot is None:
-            logging.info(f"Bot {bot_name} is not running.")
-            return
-        try:
-            await bot.send_message(message)
-        except Exception as e:
-            logging.error(f"Error sending message with bot {bot_name}: {str(e)}")
-
     def get_running_bots(self) -> List[str]:
         return list(self.bots.keys())
 
@@ -183,7 +143,7 @@ class Signal369:    # Bot Manager
         # Implement your RPC portmap configuration logic here
         pass
 
-async def tools_menu(bot_manager, flash_data: D474):
+async def tools_menu(bot_manager):
     while True:
         print("\nTools - Pirate Menu")
         print("1. Horse Stable")
@@ -192,50 +152,49 @@ async def tools_menu(bot_manager, flash_data: D474):
         print("4. Back to Main Menu")
         print("5. Move files to S3.") 
 
-        flash_message = flash_data.get_and_reset()
-        if flash_message:
-            logging.info("Message: " + flash_message)
+        current_flashdata = bot_data.get_flash_and_reset()
+        if current_flashdata:
+            print(current_flashdata)
 
         choice = input("Enter your choice: ")
 
         if choice == "1":
             print("Running Horse Stable...")
             runpy.run_path("pirate_horse_stable.py")
-            flash_data.set("Horse Stable script completed.")
+            bot_manager.bot_data.set_flash('info', "Horse Stable script completed.")
             break
         elif choice == "2":
-            flash_data.set("Hello World")
+            bot_manager.bot_data.set_flash('info', "Hello World")
             break
         elif choice == "3":
-            running_bots = bot_manager.get_running_bots() # Modify this line
+            running_bots = bot_manager.get_running_bots()
             if running_bots:
-                logging.info("\nTesting AWS for running bots:")
+                bot_manager.bot_data.set_flash('info', 'Testing AWS for running bots.')
                 for i, bot_name in enumerate(running_bots, start=1):
-                    bot = bot_manager.bots[bot_name]  # Modify this line
-                    s3_test_result = await bot.test_s3()  # Test S3 for the bot
+                    bot = bot_manager.bots[bot_name] 
+                    s3_test_result = await bot.test_s3()
                     if s3_test_result:
                         result =f"{i}. Bot {bot_name} can read from and write to S3 successfully."
-                        flash_data.set(result)
-                        logging.info(result)
+                        bot_manager.bot_data.set_flash('info', result)
                     else:
                         result = f"{i}. Bot {bot_name} failed the S3 read/write test."
-                        flash_data.set(result)
-                        logging.info(result)
+                        bot_manager.bot_data.set_flash('error', result)
+
                 input("Press any key to return to the main menu...")
         elif choice == "4":
             break
         elif choice == "5":
             running_bots = bot_manager.get_running_bots()
             if running_bots:
-                logging.info("\nMoving files to S3 for running bots:")
+                bot_manager.bot_data.set_flash('info', 'Moving files to S3 for running bots.')
                 for i, bot_name in enumerate(running_bots, start=1):
                     bot = bot_manager.bots[bot_name]
                     await bot.move_files_to_s3()
-                    logging.info(f"{i}. Bot {bot_name} moved files to S3.")
+                    bot_manager.bot_data.set_flash('info', f"{i}. Bot {bot_name} moved files to S3.")
         else:
-            logging.info("Invalid choice. Please try again.")
+            bot_manager.bot_data.set_flash('info', 'Invalid choice. Please try again.')
 
-async def service_bot(bot_manager: Signal369, flash_data: D474):
+async def service_bot(bot_manager):
     while True:
         print("\nService Menu")
         print("1. Start a bot")
@@ -243,26 +202,25 @@ async def service_bot(bot_manager: Signal369, flash_data: D474):
         print("3. Restart a bot")
         print("4. Back to Main Menu")
 
-        current_flash_data = flash_data.get_and_reset()
-        if current_flash_data:
-            #print(f"\n{current_flash_data}")
-            logging.info(f"\n{current_flash_data}")
+        current_flashdata = bot_manager.bot_data.get_flash_and_reset()
+        if current_flashdata:
+            print(current_flashdata)
 
         choice = input("Enter your choice: ")
 
         try:
             if choice == "1":
-                bot_name = display_available_bots(bot_manager, flash_data)
+                bot_name = display_available_bots(bot_manager)
                 if bot_name is None:
-                    flash_data.set("No available bots.")
+                    bot_manager.bot_data.set_flash('info', 'No available bots.')
                     continue
-                flash_message = await bot_manager.start_bot(bot_name, flash_data)
+                flash_message = await bot_manager.start_bot(bot_name)
                 if flash_message:
-                    flash_data.set(flash_message)
+                    bot_manager.bot_data.set_flash('info', flash_message)
 
             elif choice == "2":
                 if not bot_manager.bots:
-                    flash_data.set("No bots are currently running.")
+                    bot_manager.bot_data.set_flash('info', 'No bots are currently running.')
                     break
 
                 print("\nRunning bots:")
@@ -275,7 +233,7 @@ async def service_bot(bot_manager: Signal369, flash_data: D474):
 
             elif choice == "3":
                 if not bot_manager.bots:
-                    flash_data.set("No bots are currently running.")
+                    bot_manager.bot_data.set_flash('info', 'No bots are currently running.')
                     break
 
                 print("\nRunning bots:")
@@ -284,28 +242,29 @@ async def service_bot(bot_manager: Signal369, flash_data: D474):
 
                 bot_choice = int(input("Enter the number of the bot you want to restart: "))
                 bot_name = list(bot_manager.bots.keys())[bot_choice - 1]
-                await bot_manager.restart_bot(bot_name, flash_data)
+                await bot_manager.restart_bot(bot_name)
 
             elif choice == "4":
                 break
 
             else:
-                print("Invalid choice. Please try again.")
+                bot_manager.bot_data.set_flash('info', 'Invalid choice. Please try again.')
+                #print("Invalid choice. Please try again.")
 
         except Exception as e:
-            flash_data.set(str(e))
+            bot_manager.bot_data.set_flash('critical', str(e))
 
-async def connect_bot(bot_manager: Signal369, flash_data: D474):
+async def connect_bit(bot_manager, bit_manager):
     while True:
-        print("\nConnect Bot Menu")
+        print("\nConnect to Bit Menu")
         print("1. Discord")
         print("2. Telegram")
-        print("3. Back to Main Menu")
+        print("3. AWS")
+        print("4. Back to Main Menu")
 
-        flash_message = flash_data.get_and_reset()
-        if flash_message:
-            #print("Message: " + flash_message)
-            logging.info("Message: " + flash_message)
+        current_flashdata = bot_manager.bot_data.get_flash_and_reset()
+        if current_flashdata:
+            print(current_flashdata)
 
         choice = input("Enter your choice: ")
 
@@ -321,17 +280,21 @@ async def connect_bot(bot_manager: Signal369, flash_data: D474):
                 # Add the logic to connect the Telegram bot here
                 break
             elif choice == "3":
+                # Import and use the constructor class for Telegram
+                from B17_AW5 import AW5
+                # Add the logic to connect the Telegram bot here
+                break
+            elif choice == "4":
                 break
             else:
                 print("Invalid choice. Please try again.")
         except Exception as e:
-            flash_data.set(str(e))
+            bot_manager.bot_data.set_flash('critical', str(e))
 
-def display_available_bots(bot_manager, flash_data: D474):
+def display_available_bots(bot_manager):
     available_bots = bot_manager.get_available_bots()
     if not available_bots:
-        logging.error("No available bots.")
-        flash_data.set("No available bots.")
+        bot_manager.bot_data.set_flash('info', 'No available bots.')
         return None
     print("\nAvailable bots:")
     for i, bot_name in enumerate(available_bots, start=1):
@@ -348,84 +311,87 @@ def display_available_bots(bot_manager, flash_data: D474):
     bot_name = available_bots[bot_choice - 1]
     return bot_name
 
-async def main():
-    bot_manager = Signal369()
-    flash_data = D474()
+async def main_menu(bot_manager):
+    print("\nBot Troop 369 - Main Menu")
+    print("1. Configure a bot")
+    print("2. Service a bot")
+    print("3. Display running bots")
+    print("4. Connect a bot")
+    print("5. Configure Globals (e.g. RPC Portmap for all bots)")
+    print("6. Play Zip-Zap-Zop")
+    print("7. Tools")
+    print("9. Exit")
 
+    current_flashdata = bot_manager.bot_data.get_flash_and_reset()
+    if current_flashdata:
+        print(current_flashdata)
+
+    choice = input("Enter your choice: ")
+
+    try:
+        if choice == "1":
+            bot_name = display_available_bots(bot_manager)
+            bot_manager.configure_bot(bot_name)
+
+        elif choice == "2":
+            await service_bot(bot_manager)
+
+        elif choice == "3":
+            running_bots = bot_manager.get_running_bots()
+            if running_bots:
+                print("\nRunning bots:")
+                for i, bot_name in enumerate(running_bots, start=1):
+                    bot = bot_manager.bots[bot_name]  # Accessing the bot instance
+                    print(f"{i}. {bot_name}")
+                    print(f"Bit switches: {bot._bit_switches()}")
+                input("Press any key to return to the main menu...")
+            else:
+                bot_manager.bot_data.set_flash('info', 'No bots are currently running.')
+
+        elif choice == "4":
+            await bot_manager.connect_bot()
+
+        elif choice == "5":
+            bot_manager.configure_rpc_portmap()
+
+        elif choice == "6":
+            pass
+            # if current_flashdata == ZIP:
+            #     bot_manager.bot_data.set_flash('info', f'Sending ZAP message: {ZAP}')
+            #     await bot_manager.send_message(bot_name, ZAP)
+            # elif current_flashdata == ZAP:
+            #     bot_manager.bot_data.set_flash('info', f'Sending ZOP message: {ZOP}')
+            #     await bot_manager.send_message(bot_name, ZOP)
+            # else:
+            #     bot_manager.bot_data.set_flash("You Lost")
+            #     current_flashdata = bot_manager.bot_data.get_flash_and_reset()
+            #     if current_flashdata:
+            #         print(current_flashdata)
+
+        elif choice == "7":
+            await tools_menu(bot_manager)
+
+        elif choice == "8":
+            pass
+
+        elif choice == "9":
+            sys.exit()
+
+        else:
+            bot_manager.bot_data.set_flash('warning', 'Invalid choice. Please try again.')
+
+    except Exception as e:
+        bot_manager.bot_data.set_flash('critical', str(e))
+
+async def main():
+    # Create an instance of D474
+    bot_data = D474()
+    # Pass the instance to Signal369
+    bot_manager = Signal369(bot_data)
+  
     while True:
         #os.system('cls' if os.name == 'nt' else 'clear')
-
-        print("\nBot Troop 369 - Main Menu")
-        print("1. Configure a bot")
-        print("2. Service a bot")
-        print("3. Display running bots")
-        print("4. Connect a bot")
-        print("5. Configure Globals (e.g. RPC Portmap for all bots)")
-        print("6. Play Zip-Zap-Zop")
-        print("7. Tools")
-        print("9. Exit")
-
-        flash_message = flash_data.get_and_reset()
-        if flash_message:
-            print("Message: " + flash_message)
-
-        choice = input("Enter your choice: ")
-
-        try:
-            if choice == "1":
-                bot_name = display_available_bots(bot_manager, flash_data)
-                bot_manager.configure_bot(bot_name)
-
-            elif choice == "2":
-                await service_bot(bot_manager, flash_data)
-
-            elif choice == "3":
-                running_bots = bot_manager.get_running_bots()
-                if running_bots:
-                    print("\nRunning bots:")
-                    for i, bot_name in enumerate(running_bots, start=1):
-                        print(f"{i}. {bot_name}")
-                    input("Press any key to return to the main menu...")
-                else:
-                    flash_data.set("No bots are currently running.")
- 
-            elif choice == "4":
-                await connect_bot(bot_manager, flash_data)
-
-            elif choice == "5":
-                bot_manager.configure_rpc_portmap()
-
-            elif choice == "6":
-                current_flash_data = flash_data.get_and_reset()
-                logging.debug(f"Current flash_data: {current_flash_data}")  # Debug print
-                # print(f"Current flash_data: {current_flash_data}")  # Debug print
-                bot_name = "your_bot_name"  # Replace with your actual bot name
-                if current_flash_data == ZIP:
-                    # print("Sending ZAP message")  # Debug print
-                    logging.debug("Sending ZAP message")  # Debug print
-                    await bot_manager.send_message(bot_name, ZAP)
-                elif current_flash_data == ZAP:
-                    # print("Sending ZOP message")  # Debug print
-                    logging.debug("Sending ZOP message")  # Debug print
-                    await bot_manager.send_message(bot_name, ZOP)
-                else:
-                    flash_data.set("You Lost")
-
-            elif choice == "7":
-                await tools_menu(bot_manager, flash_data)
-
-            elif choice == "8":
-                pass
-
-            elif choice == "9":
-                sys.exit()
-
-            else:
-                logging.warning("Invalid choice. Please try again.")
-                # print("Invalid choice. Please try again.")
-
-        except Exception as e:
-            flash_data.set(str(e))
+        await main_menu(bot_manager)
 
 if __name__ == "__main__":
     asyncio.run(main())

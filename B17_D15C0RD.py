@@ -57,7 +57,7 @@ class D15C0RD(commands.Bot):
             self.message_queue.task_done()
 
     async def on_message(self, message):
-        if message.content == self.flash_data.get_and_reset():  # Use the get_and_reset method
+        if message.content == self.flash_data.get_flash_and_reset():  # Use the get_flash_and_reset method
             if message.content == ZIP:
                 await self.message_queue.put(self.Message(ZAP, "game"))
                 self.flash_data.set(ZAP)  # Use the set method

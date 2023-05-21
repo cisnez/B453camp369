@@ -44,7 +44,7 @@ class T3L36R4M:
                     await message.reply("Failed to generate the image.")
             elif text == "hi":
                 await message.reply("Hello!\n")
-            elif text == self.flash_data.get_and_reset():
+            elif text == self.flash_data.get_flash_and_reset():
                 if text == ZIP:
                     await message.reply(ZAP)  # Respond ZAP to received ZIP
                     self.flash_data.set(ZAP)
