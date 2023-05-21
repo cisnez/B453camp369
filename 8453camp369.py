@@ -152,7 +152,7 @@ async def tools_menu(bot_manager):
         print("4. Back to Main Menu")
         print("5. Move files to S3.") 
 
-        current_flashdata = bot_data.get_flash_and_reset()
+        current_flashdata = bot_manager.bot_data.get_flash_and_reset()
         if current_flashdata:
             print(current_flashdata)
 
@@ -192,7 +192,7 @@ async def tools_menu(bot_manager):
                     await bot.move_files_to_s3()
                     bot_manager.bot_data.set_flash('info', f"{i}. Bot {bot_name} moved files to S3.")
         else:
-            bot_manager.bot_data.set_flash('info', 'Invalid choice. Please try again.')
+            bot_manager.bot_data.set_flash('warning', 'Invalid choice. Please try again.')
 
 async def service_bot(bot_manager):
     while True:
@@ -248,8 +248,7 @@ async def service_bot(bot_manager):
                 break
 
             else:
-                bot_manager.bot_data.set_flash('info', 'Invalid choice. Please try again.')
-                #print("Invalid choice. Please try again.")
+                bot_manager.bot_data.set_flash('warning', 'Invalid choice. Please try again.')
 
         except Exception as e:
             bot_manager.bot_data.set_flash('critical', str(e))
@@ -287,7 +286,8 @@ async def connect_bit(bot_manager, bit_manager):
             elif choice == "4":
                 break
             else:
-                print("Invalid choice. Please try again.")
+                warning_message = 'Invalid choice. Please try again.'
+                bot_manager.bot_data.set_flash('warning', warning_message)
         except Exception as e:
             bot_manager.bot_data.set_flash('critical', str(e))
 
@@ -303,11 +303,16 @@ def display_available_bots(bot_manager):
     bot_choice = -1
     while bot_choice < 1 or bot_choice > len(available_bots):
         try:
+            current_flashdata = bot_manager.bot_data.get_flash_and_reset()
+            if current_flashdata:
+                print(current_flashdata)
             bot_choice = int(input("Enter the number of the bot: "))
             if bot_choice < 1 or bot_choice > len(available_bots):
-                print("Invalid choice. Please try again.")
+                warning_message = 'Invalid choice. Please try again.'
+                bot_manager.bot_data.set_flash('warning', warning_message)
         except ValueError:
-            print("Invalid input. Please enter a number.")
+                warning_message = 'Invalid input. Please enter a number.'
+                bot_manager.bot_data.set_flash('warning', warning_message)
     bot_name = available_bots[bot_choice - 1]
     return bot_name
 
@@ -342,14 +347,14 @@ async def main_menu(bot_manager):
                 print("\nRunning bots:")
                 for i, bot_name in enumerate(running_bots, start=1):
                     bot = bot_manager.bots[bot_name]  # Accessing the bot instance
-                    print(f"{i}. {bot_name}")
-                    print(f"Bit switches: {bot._bit_switches()}")
+                    print(f"{i}. {bot_name} [{bot.leet_name}]")
+                    print(f"Bit switches: {bot._bit_switches()}\n")
                 input("Press any key to return to the main menu...")
             else:
                 bot_manager.bot_data.set_flash('info', 'No bots are currently running.')
 
         elif choice == "4":
-            await bot_manager.connect_bot()
+            await connect_bit(bot_manager, bit_manager)
 
         elif choice == "5":
             bot_manager.configure_rpc_portmap()
@@ -378,7 +383,8 @@ async def main_menu(bot_manager):
             sys.exit()
 
         else:
-            bot_manager.bot_data.set_flash('warning', 'Invalid choice. Please try again.')
+                warning_message = 'Invalid choice. Please try again.'
+                bot_manager.bot_data.set_flash('warning', warning_message)
 
     except Exception as e:
         bot_manager.bot_data.set_flash('critical', str(e))
