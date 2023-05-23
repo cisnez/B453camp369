@@ -11,7 +11,7 @@ nicknames:
   - "Build4B07#0001"
   - "Build A Bot"
   - "GG"
-color: "cyan"
+color: "debug"
 
 #AWS
 aws_access_key_id: ""

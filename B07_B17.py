@@ -21,11 +21,14 @@
 # ZAP = "249"
 # ZOP = "209"
 import logging
-from B07_D474 import D474
+from B17_D474 import D474
 
 class B17:
     def __init__(self, bit_switches):
         self.bit_switches = bit_switches
+
+        # set the D474 instance reference
+        self.flash_data = D474()
 
     async def manage_bits(self):
         # Implement the functionality for managing bits.
@@ -106,8 +109,6 @@ class B17:
     #     # Create a message queue object
     #     self.message_queue = M3554635()
 
-    #     # set the D474 instance reference
-    #     self.flash_data = D474()
 
     #     # Initialize the Discord bit here
     #     self.discord_token = discord_token

@@ -3,22 +3,23 @@ import logging
 from B07_B17 import B17
 
 class B07:
-    def __init__(self, openai_api_key, discord_token, telegram_api_id, telegram_api_hash, aws_secret_access_key, bot_init_data):
-        self.init_data = bot_init_data
+    def __init__(self, openai_api_key, discord_token, telegram_api_id, telegram_api_hash, aws_secret_access_key, bot_init_data, bot_data):
 
+        self.bot_init_data = bot_init_data
+        self.bot_data = bot_data
         # Set bot properties
         self.openai_api_key = openai_api_key
         self.discord_token = discord_token
         self.telegram_api_id = telegram_api_id
         self.telegram_api_hash = telegram_api_hash
         self.aws_secret_access_key = aws_secret_access_key
-        self.leet_name = self.init_data["7331eman"]
+        self.leet_name = self.bot_init_data["7331eman"]
 
         self.bit_manager = None
         try:
             self.bit_manager = B17(self._bit_switches())
         except Exception as e:
-            logging.error(f"Failed to instantiate bot: {str(e)}")
+            self.bot_data.set_flash('critical', f"Bot failed to instantiate bit_manager: {str(e)}")
 
     def _bit_switches(self):
         return {
@@ -37,20 +38,20 @@ class B07:
         if self.bit_manager is not None:
             self.bit_manager.manage_bits()
 
-    async def start(self):
+    async def start_bit_manager(self):
         while True:
             try:
                 if self.bit_manager is not None:
                     await self.bit_manager.manage_bits()
             except Exception as e:
-                logging.error(f"Bit manager crashed: {str(e)}")
+                self.bot_data.set_flash('critical', f"Bit manager crashed: {str(e)}")
                 # Handle error or restart
 
     def start_bit(self, bit_name):
         try:
             self.bit_manager.start_bit(bit_name)
         except Exception as e:
-            logging.error(str(e))
+            self.bot_data.set_flash('error', f"Bot failed to start {bit_name}: {str(e)}")
 
 # The Single Responsibility Principle (SRP), as part of SOLID principles, asserts that a class should have only one responsibility, or in other words, it should have only one reason to change. The intention is to make the software system easier to maintain and more robust against bugs.
 
