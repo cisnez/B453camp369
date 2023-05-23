@@ -17,7 +17,7 @@ class B07:
 
         self.bit_manager = None
         try:
-            self.bit_manager = B17(self._bit_switches())
+            self.bit_manager = B17(self._bit_switches(), bot_init_data, self.bot_data)
         except Exception as e:
             self.bot_data.set_flash('critical', f"Bot failed to instantiate bit_manager: {str(e)}")
 
@@ -52,6 +52,24 @@ class B07:
             self.bit_manager.start_bit(bit_name)
         except Exception as e:
             self.bot_data.set_flash('error', f"Bot failed to start {bit_name}: {str(e)}")
+
+    async def close(self):
+        # Check if the bit_manager exists
+        if self.bit_manager is not None:
+            try:
+                # Stop any active bits
+                await self.bit_manager.stop_active_bits()
+
+                # Clean up the resources related to bit_manager
+                await self.bit_manager.cleanup()
+
+                # Remove the bit_manager object
+                self.bit_manager = None
+
+                self.bot_data.set_flash('info', f'Bot `{self.leet_name}` has been closed.')
+            except Exception as e:
+                self.bot_data.set_flash('critical', f"Error closing bot `{self.leet_name}`: {str(e)}")
+                raise e
 
 # The Single Responsibility Principle (SRP), as part of SOLID principles, asserts that a class should have only one responsibility, or in other words, it should have only one reason to change. The intention is to make the software system easier to maintain and more robust against bugs.
 

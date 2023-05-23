@@ -1,7 +1,9 @@
 #B07_B17.py
 # Bit Manager
 
-# from B07_B17 import B07
+#  self.bit_manager = B17(self._bit_switches(), self.bot_data)
+#  self.bot_data.set_flash('critical', f"Bot failed to instantiate bit_manager: {str(e)}")
+
 # from B17_TX721M6 import TX721M6
 # from B17_M3554635 import M3554635
 # from B17_T3L36R4M import T3L36R4M
@@ -20,15 +22,24 @@
 # ZIP = "219"
 # ZAP = "249"
 # ZOP = "209"
-import logging
+
 from B17_D474 import D474
 
 class B17:
-    def __init__(self, bit_switches):
+    def __init__(self, bit_switches, bot_init_data, bot_data):
         self.bit_switches = bit_switches
+        self.bot_init_data = bot_init_data
+        self.bot_data = bot_data
+        self.bot_name = bot_data.bot_name
+        self.bot_data.set_flash('debug', f"Bot failed to instantiate bit_manager: {str(e)}")
 
-        # set the D474 instance reference
-        self.flash_data = D474()
+    async def stop_active_bits(self):
+        # Here you should implement the logic to stop any active bits
+        pass
+
+    async def cleanup(self):
+        # Here you should implement the logic to clean up any resources related to bits
+        pass
 
     async def manage_bits(self):
         # Implement the functionality for managing bits.

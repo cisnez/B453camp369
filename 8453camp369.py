@@ -188,10 +188,10 @@ class Signal369:    # Bot Manager
             self.bot_data.set_flash('debug', 'wait_for_bots')
             await asyncio.gather(*tasks)
     
-    def get_listening_bots(self) -> List[str]:
-        self.bot_data.set_flash('debug', 'get_listening_bots')
-        return [bot_name for bot_name, task in self.bot_tasks.items() if not task.done()]
-        #return list(self.bots.keys())
+    def get_active_bots(self) -> List[str]:
+        active_bots = [bot_name for bot_name, task in self.bot_tasks.items() if not task.done()]
+        self.bot_data.set_flash('debug', 'Got active bots.')
+        return active_bots
 
     def configure_bot(self, bot_name: str):
         try:
@@ -208,32 +208,36 @@ class Signal369:    # Bot Manager
 
 async def tools_menu(bot_manager):
     while True:
+        clear_console()
         print("\nTools - Pirate Menu")
-        print("1. Horse Stable")
-        print("2. Flash World")
-        print("3. Test AWS for listening bots")
-        print("4. Back to Main Menu")
+        print("1. Back to Main Menu")
+        print("2. Horse Stable")
+        print("3. Flash World")
+        print("4. Test AWS for Active bots")
         print("5. Move files to S3.") 
 
-        current_flashdata = bot_manager.bot_data.get_flash_and_reset()
-        if current_flashdata:
-            print(current_flashdata)
+        print(bot_manager.bot_data.get_flash_and_reset())
 
         choice = input("Enter your choice: ")
 
         if choice == "1":
+            break
+
+        elif choice == "2":
             print("Running Horse Stable...")
             runpy.run_path("pirate_horse_stable.py")
             bot_manager.bot_data.set_flash('info', "Horse Stable script completed.")
             break
-        elif choice == "2":
+
+        elif choice == "3":
             bot_manager.bot_data.set_flash('info', "Hello World")
             break
-        elif choice == "3":
-            listening_bots = bot_manager.get_listening_bots()
-            if listening_bots:
-                bot_manager.bot_data.set_flash('info', 'Testing AWS for listening bots.')
-                for i, bot_name in enumerate(listening_bots, start=1):
+
+        elif choice == "4":
+            active_bots = bot_manager.get_active_bots()
+            if active_bots:
+                bot_manager.bot_data.set_flash('info', 'Testing AWS for Active bots.')
+                for i, bot_name in enumerate(active_bots, start=1):
                     bot = bot_manager.bots[bot_name] 
                     s3_test_result = await bot.test_s3()
                     if s3_test_result:
@@ -242,15 +246,13 @@ async def tools_menu(bot_manager):
                     else:
                         result = f"{i}. Bot {bot_name} failed the S3 read/write test."
                         bot_manager.bot_data.set_flash('error', result)
-
                 input("Press any key to return to the main menu...")
-        elif choice == "4":
-            break
+
         elif choice == "5":
-            listening_bots = bot_manager.get_listening_bots()
-            if listening_bots:
-                bot_manager.bot_data.set_flash('info', 'Moving files to S3 for listening bots.')
-                for i, bot_name in enumerate(listening_bots, start=1):
+            active_bots = bot_manager.get_active_bots()
+            if active_bots:
+                bot_manager.bot_data.set_flash('info', 'Moving files to S3 for Active bots.')
+                for i, bot_name in enumerate(active_bots, start=1):
                     bot = bot_manager.bots[bot_name]
                     await bot.move_files_to_s3()
                     bot_manager.bot_data.set_flash('info', f"{i}. Bot {bot_name} moved files to S3.")
@@ -261,23 +263,20 @@ async def manage_available_bots(bot_manager: Signal369):
     # First, the bot is selected before entering the loop
     bot_name = select_a_bot(bot_manager, bot_manager.get_available_bots(), 'available')
 
-    current_flashdata = bot_manager.bot_data.get_flash_and_reset()
-    if current_flashdata:
-        print(current_flashdata)
+    print(bot_manager.bot_data.get_flash_and_reset())
 
     if bot_name is None:
         bot_manager.bot_data.set_flash('warning', 'No bots are available.')
         return  # Return to the main menu if no available bots
 
     while True:
+        clear_console()
         print(f"\nManage {bot_name}")
         print("1. Back to Main Menu")
         print(f"2. Configure {bot_name}")
         print(f"3. Start {bot_name}")
 
-        current_flashdata = bot_manager.bot_data.get_flash_and_reset()
-        if current_flashdata:
-            print(current_flashdata)
+        print(bot_manager.bot_data.get_flash_and_reset())
 
         choice = input("Enter your choice: ")
 
@@ -298,25 +297,39 @@ async def manage_available_bots(bot_manager: Signal369):
                 bot_manager.bot_data.set_flash('debug', f'Error returned starting bot: {error_returned}')
             return  # Return to Main Menu after Start
 
-async def service_bot(bot_manager: Signal369):
+async def manage_active_bots(bot_manager: Signal369):
     while True:
+        clear_console()
         print("\nService Menu")
-        print("2. Shutdown a bot")
+        print("1. Back to Main Menu")
+        print("2. Bit Manager")
         print("3. Restart a bot")
-        print("4. Back to Main Menu")
+        print("4. Shutdown a bot")
 
-        current_flashdata = bot_manager.bot_data.get_flash_and_reset()
-        if current_flashdata:
-            print(current_flashdata)
+        print(bot_manager.bot_data.get_flash_and_reset())
 
         choice = input("Enter your choice: ")
 
         try:
-            if choice == "2":
+            if choice == "1":
+                break
+
+            elif choice == "2":
+                await connect_bit(bot_manager, bit_manager)
+
+            elif choice == "3":
+                    for i, bot_name in enumerate(bot_manager.bots.keys(), start=1):
+                        print(f"{i}. {bot_name}")
+
+                    bot_choice = int(input("Enter the number of the bot you want to restart: "))
+                    bot_name = list(bot_manager.bots.keys())[bot_choice - 1]
+                    await bot_manager.restart_bot(bot_name)
+
+            elif choice == "4":
                 if not bot_manager.bots:
-                    bot_manager.bot_data.set_flash('info', 'No bots are currently listening.')
+                    bot_manager.bot_data.set_flash('info', 'No bots are currently Active.')
                 else:
-                    print("\nlistening bots:")
+                    print("\nActive bots:")
                     for i, bot_name in enumerate(bot_manager.bots.keys(), start=1):
                         print(f"{i}. {bot_name}")
 
@@ -330,24 +343,6 @@ async def service_bot(bot_manager: Signal369):
                     except (ValueError, IndexError) as e:
                         bot_manager.bot_data.set_flash('warning', str(e))
 
-            elif choice == "3":
-                if not bot_manager.bots:
-                    bot_manager.bot_data.set_flash('info', 'No bots are currently listening.')
-                else:
-                    print("\nlistening bots:")
-                    for i, bot_name in enumerate(bot_manager.bots.keys(), start=1):
-                        print(f"{i}. {bot_name}")
-
-                    bot_choice = int(input("Enter the number of the bot you want to restart: "))
-                    bot_name = list(bot_manager.bots.keys())[bot_choice - 1]
-                    await bot_manager.restart_bot(bot_name)
-
-            elif choice == "4":
-                break
-
-            else:
-                bot_manager.bot_data.set_flash('warning', 'Invalid choice. Please try again.')
-
         except Exception as e:
             import traceback
             traceback.print_exc() 
@@ -355,15 +350,14 @@ async def service_bot(bot_manager: Signal369):
 
 async def connect_bit(bot_manager, bit_manager):
     while True:
+        clear_console()
         print("\nConnect to Bit Menu")
         print("1. Discord")
         print("2. Telegram")
         print("3. AWS")
         print("4. Back to Main Menu")
 
-        current_flashdata = bot_manager.bot_data.get_flash_and_reset()
-        if current_flashdata:
-            print(current_flashdata)
+        print(bot_manager.bot_data.get_flash_and_reset())
 
         choice = input("Enter your choice: ")
 
@@ -397,6 +391,7 @@ def select_a_bot(bot_manager, bot_list: List[str], bot_type: str):
         bot_manager.bot_data.set_flash('info', f'No {bot_type} bots.')
         return None
 
+    clear_console()
     print(f"\n{bot_type.capitalize()} bots:")
     for i, bot_name in enumerate(bot_list, start=1):
         print(f"{i}. {bot_name}")
@@ -411,20 +406,23 @@ def select_a_bot(bot_manager, bot_list: List[str], bot_type: str):
         except (ValueError, IndexError) as e:
             bot_manager.bot_data.set_flash('warning', str(e))
 
+def clear_console():
+    command = 'cls' if os.name == 'nt' else 'clear'
+    os.system(command)
+
 async def main_menu(bot_manager):
+    clear_console()
     print("\nBot Troop 369 - Main Menu")
     print("1. Manage Available Bots")
     print("2. Manage Active Bots")
     print("3. Display Active bots")
-    print("4. Connect a bot")
+    print("4. ")
     print("5. Configure Globals (e.g. RPC Portmap for all bots)")
     print("6. Play Zip-Zap-Zop")
     print("7. Tools")
     print("9. Exit")
 
-    current_flashdata = bot_manager.bot_data.get_flash_and_reset()
-    if current_flashdata:
-        print(current_flashdata)
+    print(bot_manager.bot_data.get_flash_and_reset())
 
     choice = input("Enter your choice: ")
 
@@ -438,13 +436,19 @@ async def main_menu(bot_manager):
                 bot_manager.bot_data.set_flash('critical', f'{str(e)}')
 
         elif choice == "2":
-            await service_bot(bot_manager)
+            try:
+                await manage_active_bots(bot_manager)
+            except Exception as e:
+                import traceback
+                traceback.print_exc() 
+                bot_manager.bot_data.set_flash('critical', f'{str(e)}')
 
         elif choice == "3":
-            listening_bots = bot_manager.get_listening_bots()
-            if listening_bots:
-                print("\nListening bots:")
-                for i, bot_name in enumerate(listening_bots, start=1):
+            active_bots = bot_manager.get_active_bots()
+            if active_bots:
+                clear_console()
+                print("Active bots:")
+                for i, bot_name in enumerate(active_bots, start=1):
                     # Accessing the bot instance
                     bot = bot_manager.bots[bot_name]
                     # Use logging level as color, default to 'info' if color not found
@@ -453,13 +457,23 @@ async def main_menu(bot_manager):
                     print(f"{bot_color}{i}. {bot_name} [{bot.leet_name}] - Bit switches: {bot._bit_switches()}\033[0m")
                 input("Press any key to return to the main menu...")
             else:
-                bot_manager.bot_data.set_flash('info', 'No bots are currently listening.')
+                bot_manager.bot_data.set_flash('info', 'No bots are currently Active.')
 
         elif choice == "4":
-            await connect_bit(bot_manager, bit_manager)
+            try:
+                pass
+            except Exception as e:
+                import traceback
+                traceback.print_exc() 
+                bot_manager.bot_data.set_flash('critical', f'{str(e)}')
 
         elif choice == "5":
-            bot_manager.configure_rpc_portmap()
+            try:
+                bot_manager.configure_rpc_portmap()
+            except Exception as e:
+                import traceback
+                traceback.print_exc() 
+                bot_manager.bot_data.set_flash('critical', f'{str(e)}')
 
         elif choice == "6":
             pass
@@ -471,12 +485,15 @@ async def main_menu(bot_manager):
             #     await bot_manager.send_message(bot_name, ZOP)
             # else:
             #     bot_manager.bot_data.set_flash("You Lost")
-            #     current_flashdata = bot_manager.bot_data.get_flash_and_reset()
-            #     if current_flashdata:
-            #         print(current_flashdata)
+            #     print(bot_manager.bot_data.get_flash_and_reset())
 
         elif choice == "7":
-            await tools_menu(bot_manager)
+            try:
+                await tools_menu(bot_manager)
+            except Exception as e:
+                import traceback
+                traceback.print_exc() 
+                bot_manager.bot_data.set_flash('critical', f'{str(e)}')
 
         elif choice == "8":
             pass
