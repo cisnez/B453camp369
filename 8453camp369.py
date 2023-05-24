@@ -115,29 +115,29 @@ class Signal369:    # Bot Manager
                 warning_message = f"The discord_token is set to None for {bot_name}. Please check the ___tokens__.yaml file."
                 self.bot_data.set_flash('warning', warning_message)
             else:
-                self.bot_data.set_flash('info', f"Retrieved discord_token for {bot_name}.")
+                self.bot_data.set_flash('debug', f"Retrieved discord_token for {bot_name}.")
 
             if aws_secret_access_key is None:
                 warning_message = f"The aws_secret_access_key is set to None for {bot_name}. Please check the ___keys__.yaml file."
                 self.bot_data.set_flash('warning', warning_message)
             else:
-                self.bot_data.set_flash('info', f"Retrieved aws_secret_access_key for {bot_name}.")
+                self.bot_data.set_flash('debug', f"Retrieved aws_secret_access_key for {bot_name}.")
 
             if openai_key is None:
                 warning_message = f"The openai_api_key is set to None for {bot_name}. Please check the ___keys__.yaml file."
                 self.bot_data.set_flash('warning', warning_message)
             else:
-                self.bot_data.set_flash('info', f"Retrieved openai_api_key for {bot_name}.")
+                self.bot_data.set_flash('debug', f"Retrieved openai_api_key for {bot_name}.")
 
             if telegram_api_id is None or telegram_api_hash is None:
                 warning_message = f"The Telegram api_id or api_hash is set to None for {bot_name}. Please check the _init_{bot_name}.yaml and the ___keys__.yaml files."
                 self.bot_data.set_flash('warning', warning_message)
             else:
-                self.bot_data.set_flash('info', f"Retrieved Telegram api_id and api_hash for {bot_name}.")
+                self.bot_data.set_flash('debug', f"Retrieved Telegram api_id and api_hash for {bot_name}.")
 
         # Create and store the bot instance
         try:
-            bot = B07(openai_key, discord_token, telegram_api_id, telegram_api_hash, aws_secret_access_key, bot_init_data, self.bot_data)
+            bot = B07(bot_name, openai_key, discord_token, telegram_api_id, telegram_api_hash, aws_secret_access_key, bot_init_data, self.bot_data)
 
             # Start the bot as an asyncio task
             task = asyncio.create_task(bot.start_bit_manager())
@@ -239,7 +239,7 @@ async def tools_menu(bot_manager):
                 bot_manager.bot_data.set_flash('info', 'Testing AWS for Active bots.')
                 for i, bot_name in enumerate(active_bots, start=1):
                     bot = bot_manager.bots[bot_name] 
-                    s3_test_result = await bot.test_s3()
+                    s3_test_result = await bot.bit_manager.test_s3()
                     if s3_test_result:
                         result =f"{i}. Bot {bot_name} can read from and write to S3 successfully."
                         bot_manager.bot_data.set_flash('info', result)
@@ -315,7 +315,7 @@ async def manage_active_bots(bot_manager: Signal369):
                 break
 
             elif choice == "2":
-                await connect_bit(bot_manager, bit_manager)
+                await connect_bit(bot_manager)
 
             elif choice == "3":
                     for i, bot_name in enumerate(bot_manager.bots.keys(), start=1):
@@ -348,14 +348,15 @@ async def manage_active_bots(bot_manager: Signal369):
             traceback.print_exc() 
             bot_manager.bot_data.set_flash('critical', f'Error during servicing a bot: {str(e)}')
 
-async def connect_bit(bot_manager, bit_manager):
+async def connect_bit(bot_manager):
     while True:
         clear_console()
-        print("\nConnect to Bit Menu")
-        print("1. Discord")
-        print("2. Telegram")
-        print("3. AWS")
-        print("4. Back to Main Menu")
+        print("\nBit Manager Menu")
+        print("1. Back to Main Menu")
+        print("2. Discord")
+        print("3. Telegram")
+        print("4. AWS")
+        print("5. OpenAi")
 
         print(bot_manager.bot_data.get_flash_and_reset())
 
@@ -363,21 +364,19 @@ async def connect_bit(bot_manager, bit_manager):
 
         try:
             if choice == "1":
-                # Import and use the constructor class for Discord
-                from B17_D15C0RD import D15C0RD
-                bot_manager.bot_data.set_flash('debug', 'from B17_D15C0RD import D15C0RD')
-                # Add the logic to connect the Discord bot here
-            elif choice == "2":
-                # Import and use the constructor class for Telegram
-                from B17_T3L36R4M import T3L36R4M
-                bot_manager.bot_data.set_flash('debug', 'from B17_D15C0RD import T3L36R4M')
-                # Add the logic to connect the Telegram bot here
-            elif choice == "3":
-                # Import and use the constructor class for Telegram
-                from B17_AW5 import AW5
-                # Add the logic to connect the Telegram bot here
-            elif choice == "4":
                 break
+            elif choice == "2":
+                # Add the logic to connect the Discord bot here
+                bot_manager.bot_data.set_flash('debug', 'Fake starting Discord bit.')
+            elif choice == "3":
+                # Add the logic to connect the Telegram bot here
+                bot_manager.bot_data.set_flash('debug', 'Fake starting Telegram bit.')
+            elif choice == "4":
+                # Add the logic to connect the Telegram bot here
+                bot_manager.bot_data.set_flash('debug', 'Fake starting AWS bit.')
+            elif choice == "5":
+                # Add the logic to connect the Telegram bot here
+                bot_manager.bot_data.set_flash('debug', 'Fake starting OpenAi bit.')
             else:
                 warning_message = 'Invalid choice. Please try again.'
                 bot_manager.bot_data.set_flash('warning', warning_message)

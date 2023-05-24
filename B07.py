@@ -3,35 +3,50 @@ import logging
 from B07_B17 import B17
 
 class B07:
-    def __init__(self, openai_api_key, discord_token, telegram_api_id, telegram_api_hash, aws_secret_access_key, bot_init_data, bot_data):
-
+    def __init__(self, bot_name, openai_api_key, discord_token, telegram_api_id, telegram_api_hash, aws_secret_access_key, bot_init_data, bot_data):
+        self.bot_name = bot_name
         self.bot_init_data = bot_init_data
         self.bot_data = bot_data
-        # Set bot properties
-        self.openai_api_key = openai_api_key
-        self.discord_token = discord_token
-        self.telegram_api_id = telegram_api_id
-        self.telegram_api_hash = telegram_api_hash
-        self.aws_secret_access_key = aws_secret_access_key
-        self.leet_name = self.bot_init_data["7331eman"]
-
+        self.leet_name = bot_init_data["7331eman"]
+        # Set bot properties in dictionary
+        self.properties = {
+            "openai_api_key": openai_api_key,
+            "discord_token": discord_token,
+            "telegram_api_id": telegram_api_id,
+            "telegram_api_hash": telegram_api_hash,
+            "aws_secret_access_key": aws_secret_access_key,
+        }
         self.bit_manager = None
         try:
-            self.bit_manager = B17(self._bit_switches(), bot_init_data, self.bot_data)
+            self.bit_manager = B17(bot_name, self.properties, bot_init_data, self.bot_data)
         except Exception as e:
             self.bot_data.set_flash('critical', f"Bot failed to instantiate bit_manager: {str(e)}")
 
-    def _bit_switches(self):
+    def _bit_auth(self):
         return {
-            "identity": self.leet_name is not None,
-            "openai_api": self.openai_api_key is not None,
-            "discord_api": self.discord_token is not None,
-            "telegram_api": self.telegram_api_id is not None and self.telegram_api_hash is not None,
-            "aws_api": self.aws_secret_access_key is not None,
+            "openai_api": self.properties["openai_api_key"],
+            "discord_api": self.properties["discord_token"],
+            "telegram_api": {
+                "api_id": self.properties["telegram_api_id"],
+                "api_hash": self.properties["telegram_api_hash"]
+            },
+            "aws_api": self.properties["aws_secret_access_key"],
             "txt2txt_api": None,
             "txt2img_api": None,
             "img2txt_api": None,
             "img2img_api": None
+        }
+
+    def _bit_switches(self):
+        return {
+            "openai_api": self.properties["openai_api_key"] is not None,
+            "discord_api": self.properties["discord_token"] is not None,
+            "telegram_api": self.properties["telegram_api_id"] is not None and self.properties["telegram_api_hash"] is not None,
+            "aws_api": self.properties["aws_secret_access_key"] is not None,
+            "txt2txt_api": False,
+            "txt2img_api": None is not None,
+            "img2txt_api": False,
+            "img2img_api": None is not None
         }
 
     def manage_bot(self):
@@ -46,12 +61,6 @@ class B07:
             except Exception as e:
                 self.bot_data.set_flash('critical', f"Bit manager crashed: {str(e)}")
                 # Handle error or restart
-
-    def start_bit(self, bit_name):
-        try:
-            self.bit_manager.start_bit(bit_name)
-        except Exception as e:
-            self.bot_data.set_flash('error', f"Bot failed to start {bit_name}: {str(e)}")
 
     async def close(self):
         # Check if the bit_manager exists

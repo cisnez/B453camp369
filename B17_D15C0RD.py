@@ -58,14 +58,7 @@ class D15C0RD(commands.Bot):
 
     async def on_message(self, message):
         if message.content == self.flash_data.get_flash_and_reset():  # Use the get_flash_and_reset method
-            if message.content == ZIP:
-                await self.message_queue.put(self.Message(ZAP, "game"))
-                self.flash_data.set(ZAP)  # Use the set method
-            elif message.content == ZAP:
-                await self.message_queue.put(self.Message(ZOP, "game"))
-                self.flash_data.set(ZOP)  # Use the set method
-            else:
-                self.flash_data.set("You Lost")  # Use the set method
+            pass
         else:
             print(f"Received message: {message}")
             await self.message_queue.put(self.Message(message, "message"))

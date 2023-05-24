@@ -1,16 +1,12 @@
 #B07_B17.py
 # Bit Manager
 
-#  self.bit_manager = B17(self._bit_switches(), self.bot_data)
-#  self.bot_data.set_flash('critical', f"Bot failed to instantiate bit_manager: {str(e)}")
-
 # from B17_TX721M6 import TX721M6
 # from B17_M3554635 import M3554635
 # from B17_T3L36R4M import T3L36R4M
 # from B17_D15C0RD import D15C0RD
 # from discord.ext import commands       # pip install discord
 # from discord import Intents            # pip install discord
-# from B17_AW5 import AW5
 # import boto3
 # from botocore.exceptions import NoCredentialsError
 # from transformers import GPT2Tokenizer  # Import the tokenizer module
@@ -24,21 +20,24 @@
 # ZOP = "209"
 
 from B17_D474 import D474
+from B17_AW5 import AW5
 
 class B17:
-    def __init__(self, bit_switches, bot_init_data, bot_data):
+    def __init__(self, bot_name, bit_switches, bot_init_data, bot_data):
+        self.bot_name = bot_name
         self.bit_switches = bit_switches
         self.bot_init_data = bot_init_data
         self.bot_data = bot_data
-        self.bot_name = bot_data.bot_name
-        self.bot_data.set_flash('debug', f"Bot failed to instantiate bit_manager: {str(e)}")
+        self.bot_data.set_flash('debug', f"{self.bot_name} constructed a new bit_manager.")
 
     async def stop_active_bits(self):
         # Here you should implement the logic to stop any active bits
+        self.bot_data.set_flash('debug', f"Passing through `stop_active_bits`.")
         pass
 
     async def cleanup(self):
         # Here you should implement the logic to clean up any resources related to bits
+        self.bot_data.set_flash('debug', f"Passing through `cleanup`.")
         pass
 
     async def manage_bits(self):
@@ -50,14 +49,32 @@ class B17:
                     await self.manage_discord()
                 elif bit == 'openai_api':
                     await self.manage_openai()
+                elif bit == 'discord_api':
+                    await self.manage_discord()
+                elif bit == 'openai_api':
+                    await self.manage_openai()
                 # Add more elif conditions for other bits.
+        self.bot_data.set_flash('debug', f"Passing through `manage_bits`.")
     
+    async def manage_aws(self):
+        if self.aws_bit is not None:
+            # Your AWS bit related management code goes here.
+            self.bot_data.set_flash('debug', f"Passing through `manage_aws`.")
+            pass
+
     async def manage_discord(self):
         # Implement your Discord bot logic here.
+        self.bot_data.set_flash('debug', f"Passing through `manage_discord`.")
+        pass
+
+    async def manage_telegram(self):
+        # Implement your Discord bot logic here.
+        self.bot_data.set_flash('debug', f"Passing through `manage_discord`.")
         pass
 
     async def manage_openai(self):
         # Implement your OpenAI logic here.
+        self.bot_data.set_flash('debug', f"Passing through `manage_openai`.")
         pass
 
     # You can add more manage_X methods for other bits.
@@ -68,19 +85,50 @@ class B17:
         for bit, is_on in self.bit_switches.items():
             if is_on:
                 # Depending on the bit, initialize certain resources.
-                if bit == 'discord_api':
+                if bit == 'aws_api':
+                    self.init_aws()
+                elif bit == 'discord_api':
                     self.init_discord()
                 elif bit == 'openai_api':
                     self.init_openai()
                 # Add more elif conditions for other bits.
 
+    def init_aws(self):
+        if 'aws_api' in self.bit_switches:
+            aws_secret_access_key = self.bit_switches['aws_api']
+            try:
+                self.aws_bit = AW5(aws_secret_access_key)
+                self.bot_data.set_flash('info', f"Initialized AWS bit")
+            except Exception as e:
+                self.bot_data.set_flash('error', f"Failed to initialize AWS bit: {str(e)}")
+
     def init_discord(self):
         # Implement Discord initialization here.
+        self.bot_data.set_flash('debug', f"Passing through `init_discord`.")
         pass
 
     def init_openai(self):
         # Implement OpenAI initialization here.
+        self.bot_data.set_flash('debug', f"Passing through `init_openai`.")
         pass
+
+    async def test_s3(self):
+        test_filename = "test_file.txt"
+        test_content = "This is a test."
+        
+        # Write the file
+        self.aws_bit.s3.put_object(Body=test_content, Bucket=self.storage_path, Key=test_filename)
+
+        # Read the file back
+        s3_object = self.aws_bit.s3.get_object(Bucket=self.storage_path, Key=test_filename)
+        file_content = s3_object["Body"].read().decode()
+
+        if file_content == test_content:
+            self.bot_data.set_flash('info', "The write and read both worked")
+            return True  # The write and read both worked
+        else:
+            self.bot_data.set_flash('error', "Something went wrong")
+            return False  # Something went wrong
 
     # You can add more init_X methods for other bits.
 
@@ -92,19 +140,8 @@ class B17:
     #     self.nicknames = bot_init_data["nicknames"]
     #     self.color = bot_init_data["color"]
 
-    #     # Initialize the AWS bit here or local "bucket" if not initialized
-    #     self.local_bucket_path = "/source"
-    #     self.aws_bucket_path = "s3://s3.cisnez.com"
-    #     try:
-    #         self.aws_access_key_id = bot_init_data["aws_access_key_id"]
-    #         self.aws_secret_access_key = aws_secret_access_key
-    #         self.aws_bit = AW5(self.aws_access_key_id, self.aws_secret_access_key)
-    #         self.storage_path = self.aws_bucket_path
-    #     except NoCredentialsError:
-    #         logging.error("Invalid AWS credentials provided. Falling back to local file system.")
-    #         self.aws_bit = None
-    #         self.storage_path = self.local_bucket_path
-    
+        # Initialize the AWS bit here or local "bucket" if not initialized
+
     #     # Image dimensions for txt2img and img2img
     #     self.img_width = bot_init_data["img_width"]
     #     self.img_height = bot_init_data["img_height"]
@@ -163,38 +200,3 @@ class B17:
     #     self.ignore_channel_ids = set(bot_init_data["ignore_channel_ids"])
         
     #     super().__init__(command_prefix=command_prefix, intents=intents)
-
-    # def manage_bits(self):
-    #     # Instantiate all bits unless they were set `False` by B07
-    #     if self.aws_bit is not None:
-    #         try:
-    #             self.test_s3()
-    #         except Exception as e:
-    #             logging.error(f"Failed to connect to AWS: {str(e)}")
-    #             self.aws_bit = None
-
-    #     # Additional code to manage the other bits (txt2img, OpenAI, Discord, Telegram) would follow a similar pattern
-
-    # async def start(self, token):
-    #     await self.run(token)
-    #     # Send a ZIP message to start the handshake
-    #     await self.discord_bot.message_queue.put(M3554635.Message(ZIP, "handshake"))
-
-    # async def test_s3(self):
-    #     test_filename = "test_file.txt"
-    #     test_content = "This is a test."
-        
-    #     # Write the file
-    #     self.aws_bit.s3.put_object(Body=test_content, Bucket=self.storage_path, Key=test_filename)
-
-    #     # Read the file back
-    #     s3_object = self.aws_bit.s3.get_object(Bucket=self.storage_path, Key=test_filename)
-    #     file_content = s3_object["Body"].read().decode()
-
-    #     if file_content == test_content:
-    #         logging.info("The write and read both worked")
-    #         return True  # The write and read both worked
-    #     else:
-    #         logging.error("Something went wrong")
-    #         return False  # Something went wrong
-
