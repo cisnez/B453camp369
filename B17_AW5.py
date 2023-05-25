@@ -4,9 +4,10 @@ import logging
 from botocore.exceptions import NoCredentialsError, BotoCoreError
 
 class AW5:
-    def __init__(self, aws_access_key_id, aws_secret_access_key, aws_region="us-west-1"):
+    def __init__(self, aws_access_key_id, aws_secret_access_key, bit_data, aws_region="us-west-1"):
         self.aws_access_key_id = aws_access_key_id
         self.aws_secret_access_key = aws_secret_access_key
+        self.bit_data = bit_data
         self.aws_region = aws_region
 
         try:
@@ -17,19 +18,19 @@ class AW5:
                 aws_secret_access_key=self.aws_secret_access_key,
             )
         except BotoCoreError as e:
-            logging.error(f"Failed to connect to AWS: {e}")
+            self.bit_data.bot_data.set_flash('error', f"Failed to connect to AWS: {e}")
             raise e
 
     def write_s3(self, path, filename, data):
         try:
             bucket_name, s3_key = self._get_bucket_and_key(path, filename)
             self.s3.put_object(Body=data, Bucket=bucket_name, Key=s3_key)
-            logging.info(f"File uploaded to {bucket_name}/{s3_key}")
+            self.bit_data.bot_data.set_flash('debug', f"File uploaded to {bucket_name}/{s3_key}")
         except NoCredentialsError:
-            logging.error("Credentials not available")
+            self.bit_data.bot_data.set_flash('error', "Credentials not available")
             raise
         except Exception as e:
-            logging.error(f"An error occurred: {e}")
+            self.bit_data.bot_data.set_flash('error', f"An error occurred: {e}")
             raise e
 
     def read_s3(self, path, filename):
@@ -64,6 +65,24 @@ class AW5:
         key_parts = list(path.parts[2:]) + [filename]
         s3_key = "/".join(key_parts)
         return bucket_name, s3_key
+
+    async def test_s3(self, test_bucket, test_key, test_content):
+        try:
+            # Write the file
+            self.write_s3(test_bucket, test_key, test_content)
+            # Read the file back
+            read_content = self.read_s3(test_bucket, test_key)
+
+            if read_content != test_content:
+                return False  # Something went wrong
+
+            # If the write and read both worked, delete the test file
+            self.delete_s3(test_bucket, test_key)
+            logging.debug(f"S3 test passed for {test_bucket}/{test_key}")
+        except Exception as e:
+            logging.error(f"An error occurred during S3 test: {e}")
+            return False
+        return True
 
 # It appears you're trying to use `self.s3_client` and `self.move_files_to_s3` from the `B17` class, but these attributes and methods aren't defined in that class. 
 

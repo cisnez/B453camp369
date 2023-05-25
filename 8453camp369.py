@@ -239,14 +239,26 @@ async def tools_menu(bot_manager):
                 bot_manager.bot_data.set_flash('info', 'Testing AWS for Active bots.')
                 for i, bot_name in enumerate(active_bots, start=1):
                     bot = bot_manager.bots[bot_name] 
-                    s3_test_result = await bot.bit_manager.test_s3()
-                    if s3_test_result:
-                        result =f"{i}. Bot {bot_name} can read from and write to S3 successfully."
-                        bot_manager.bot_data.set_flash('info', result)
+
+                    # Check if the bot's AWS bit has been initialized
+                    if not hasattr(bot.bit_manager, 'aws_bit') or bot.bit_manager.aws_bit is None:
+                        result = f"{i}. Bot {bot_name} has not initialized its AWS bit."
+                        bot_manager.bot_data.set_flash('warning', result)
                     else:
-                        result = f"{i}. Bot {bot_name} failed the S3 read/write test."
-                        bot_manager.bot_data.set_flash('error', result)
-                input("Press any key to return to the main menu...")
+                        test_bucket = "your-test-bucket"
+                        test_key = "test-file.txt"
+                        test_content = "This is a test."
+                        s3_test_result = await bot.bit_manager.aws_bit.test_s3(test_bucket, test_key, test_content)
+                        if s3_test_result:
+                            result =f"{i}. Bot {bot_name} can read from and write to S3 successfully."
+                            bot_manager.bot_data.set_flash('info', result)
+                        else:
+                            result = f"{i}. Bot {bot_name} failed the S3 read/write test."
+                            bot_manager.bot_data.set_flash('error', result)
+
+                # Display flash data whether or not an AWS test was attempted
+                print(bot_manager.bot_data.get_flash_and_reset())
+            input("Press any key to return to the main menu...")
 
         elif choice == "5":
             active_bots = bot_manager.get_active_bots()
@@ -349,41 +361,50 @@ async def manage_active_bots(bot_manager: Signal369):
             bot_manager.bot_data.set_flash('critical', f'Error during servicing a bot: {str(e)}')
 
 async def connect_bit(bot_manager):
-    while True:
-        clear_console()
-        print("\nBit Manager Menu")
-        print("1. Back to Main Menu")
-        print("2. Discord")
-        print("3. Telegram")
-        print("4. AWS")
-        print("5. OpenAi")
+    bot_name = select_a_bot(bot_manager, bot_manager.get_active_bots(), 'active')
 
-        print(bot_manager.bot_data.get_flash_and_reset())
+    if bot_name is not None:
+        bot = bot_manager.bots[bot_name]  # Assuming bots are stored in a dictionary in bot_manager
 
-        choice = input("Enter your choice: ")
+        while True:
+            clear_console()
+            print("\nBit Connector Menu for: " + bot_name)
+            print("1. Back to Main Menu")
+            print("2. Start Discord")
+            print("3. Start Telegram")
+            print("4. Start AWS")
+            print("5. Start OpenAi")
 
-        try:
-            if choice == "1":
-                break
-            elif choice == "2":
-                # Add the logic to connect the Discord bot here
-                bot_manager.bot_data.set_flash('debug', 'Fake starting Discord bit.')
-            elif choice == "3":
-                # Add the logic to connect the Telegram bot here
-                bot_manager.bot_data.set_flash('debug', 'Fake starting Telegram bit.')
-            elif choice == "4":
-                # Add the logic to connect the Telegram bot here
-                bot_manager.bot_data.set_flash('debug', 'Fake starting AWS bit.')
-            elif choice == "5":
-                # Add the logic to connect the Telegram bot here
-                bot_manager.bot_data.set_flash('debug', 'Fake starting OpenAi bit.')
-            else:
-                warning_message = 'Invalid choice. Please try again.'
-                bot_manager.bot_data.set_flash('warning', warning_message)
-        except Exception as e:
-            import traceback
-            traceback.print_exc() 
-            bot_manager.bot_data.set_flash('critical', f'Error during connecting bit: {str(e)}')
+            print(bot_manager.bot_data.get_flash_and_reset())
+
+            choice = input("Enter your choice: ")
+
+            try:
+                if choice == "1":
+                    break
+                elif choice == "2":
+                    # Initialize the Discord bit
+                    bot.bit_manager.init_bit('discord_api')
+                    bot.bot_data.set_flash('debug', 'Instantiating Discord Bit')
+                elif choice == "3":
+                    # Initialize the Telegram bit
+                    bot.bit_manager.init_bit('telegram_api')
+                    bot.bot_data.set_flash('debug', 'Instantiating Telegram Bit')
+                elif choice == "4":
+                    # Initialize the AWS bit
+                    bot.bit_manager.init_bit('aws_api')
+                    bot.bot_data.set_flash('debug', 'Instantiating AWS Bit')
+                elif choice == "5":
+                    # Initialize the OpenAi bit
+                    bot.bit_manager.init_bit('openai_api')
+                    bot.bot_data.set_flash('debug', 'Instantiating OpenAi Bit')
+                else:
+                    warning_message = 'Invalid choice. Please try again.'
+                    bot.bot_data.set_flash('warning', warning_message)
+            except Exception as e:
+                import traceback
+                traceback.print_exc() 
+                bot.bot_data.set_flash('critical', f'Error during connecting bit: {str(e)}')
 
 def select_a_bot(bot_manager, bot_list: List[str], bot_type: str):
     if not bot_list:
