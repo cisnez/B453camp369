@@ -91,6 +91,7 @@ class Signal369:    # Bot Manager
 
         discord_token = None
         aws_secret_access_key = None
+        aws_access_key_id = None
         openai_key = None
         telegram_api_id = None
         telegram_api_hash = None
@@ -98,6 +99,8 @@ class Signal369:    # Bot Manager
         try:
             discord_token = self.tokens.get(f"{bot_name}_discord_token")
             aws_secret_access_key = self.keys.get(f"{bot_name}_aws_secret_access_key")
+            aws_access_key_id = self.keys.get(f"{bot_name}_aws_access_key_id")
+
             openai_key = self.keys.get("openai_api_key")
             telegram_api_id = bot_init_data.get("telegram_api_id")
             telegram_api_hash = self.keys.get(f"{bot_name}_telegram_api_hash")
@@ -117,11 +120,11 @@ class Signal369:    # Bot Manager
             else:
                 self.bot_data.set_flash('debug', f"Retrieved discord_token for {bot_name}.")
 
-            if aws_secret_access_key is None:
-                warning_message = f"The aws_secret_access_key is set to None for {bot_name}. Please check the ___keys__.yaml file."
+            if aws_secret_access_key is None or aws_access_key_id is None:
+                warning_message = f"The aws_secret_access_key or aws_access_key_id is set to None for {bot_name}. Please check the ___keys__.yaml file."
                 self.bot_data.set_flash('warning', warning_message)
             else:
-                self.bot_data.set_flash('debug', f"Retrieved aws_secret_access_key for {bot_name}.")
+                self.bot_data.set_flash('debug', f"Retrieved AWS keys for {bot_name}.")
 
             if openai_key is None:
                 warning_message = f"The openai_api_key is set to None for {bot_name}. Please check the ___keys__.yaml file."
@@ -137,7 +140,7 @@ class Signal369:    # Bot Manager
 
         # Create and store the bot instance
         try:
-            bot = B07(bot_name, openai_key, discord_token, telegram_api_id, telegram_api_hash, aws_secret_access_key, bot_init_data, self.bot_data)
+            bot = B07(bot_name, openai_key, discord_token, telegram_api_id, telegram_api_hash, aws_secret_access_key, aws_access_key_id, bot_init_data, self.bot_data)
 
             # Start the bot as an asyncio task
             task = asyncio.create_task(bot.start_bit_manager())
@@ -238,10 +241,11 @@ async def tools_menu(bot_manager):
             if active_bots:
                 bot_manager.bot_data.set_flash('info', 'Testing AWS for Active bots.')
                 for i, bot_name in enumerate(active_bots, start=1):
-                    bot = bot_manager.bots[bot_name] 
+                    bot = bot_manager.bots[bot_name]
+                    bot_status = bot.get_bit_status()
 
                     # Check if the bot's AWS bit has been initialized
-                    if not hasattr(bot.bit_manager, 'aws_bit') or bot.bit_manager.aws_bit is None:
+                    if not bot_status["aws_api"]:
                         result = f"{i}. Bot {bot_name} has not initialized its AWS bit."
                         bot_manager.bot_data.set_flash('warning', result)
                     else:

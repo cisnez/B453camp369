@@ -40,7 +40,6 @@ class D474:
     def get_flash_and_reset(self):
         data = self._flashdata if self._flashdata is not None else ""
         self._flashdata = None
-        logging.debug("Getting and resetting flash data.")
         return data
 
     @staticmethod

@@ -1,9 +1,8 @@
 # B07.py
-import logging
 from B07_B17 import B17
 
 class B07:
-    def __init__(self, bot_name, openai_api_key, discord_token, telegram_api_id, telegram_api_hash, aws_secret_access_key, bot_init_data, bot_data):
+    def __init__(self, bot_name, openai_api_key, discord_token, telegram_api_id, telegram_api_hash, aws_secret_access_key, aws_access_key_id, bot_init_data, bot_data):
         self.bot_name = bot_name
         self.bot_init_data = bot_init_data
         self.bot_data = bot_data
@@ -15,10 +14,11 @@ class B07:
             "telegram_api_id": telegram_api_id,
             "telegram_api_hash": telegram_api_hash,
             "aws_secret_access_key": aws_secret_access_key,
+            "aws_access_key_id": aws_access_key_id,
         }
-        self.bit_manager = None
+
         try:
-            self.bit_manager = B17(bot_name, self.properties, bot_init_data, self.bot_data)
+            self.bit_manager = B17(self, self._bit_switches(), self._bit_auth(), bot_init_data, self.bot_data)
         except Exception as e:
             self.bot_data.set_flash('critical', f"Bot failed to instantiate bit_manager: {str(e)}")
 
@@ -30,7 +30,10 @@ class B07:
                 "api_id": self.properties["telegram_api_id"],
                 "api_hash": self.properties["telegram_api_hash"]
             },
-            "aws_api": self.properties["aws_secret_access_key"],
+            "aws_api": {
+                "access_key_id": self.properties["aws_access_key_id"],
+                "secret_access_key": self.properties["aws_secret_access_key"],
+            },
             "txt2txt_api": None,
             "txt2img_api": None,
             "img2txt_api": None,
@@ -42,12 +45,23 @@ class B07:
             "openai_api": self.properties["openai_api_key"] is not None,
             "discord_api": self.properties["discord_token"] is not None,
             "telegram_api": self.properties["telegram_api_id"] is not None and self.properties["telegram_api_hash"] is not None,
-            "aws_api": self.properties["aws_secret_access_key"] is not None,
+            "aws_api": self.properties["aws_access_key_id"] is not None and self.properties["aws_secret_access_key"] is not None,
             "txt2txt_api": False,
             "txt2img_api": None is not None,
             "img2txt_api": False,
             "img2img_api": None is not None
         }
+    # _bit_switches checks if the bot has the necessary "ingredients" to initialize a bit, while get_bit_status checks if the bot has successfully used those "ingredients" to create a functioning bit.
+    def get_bit_status(self):
+        # Flash bit statuses
+        bit_status = {
+            "aws_api": self.bit_manager.aws_bit is not None,
+            "discord_api": self.bit_manager.discord_bit is not None,
+            "telegram_api": self.bit_manager.telegram_bit is not None,
+            "openai_api": self.bit_manager.openai_bit is not None
+        }
+        self.bot_data.set_flash('debug', f"Bit statuses for bot {self.bot_name}: {bit_status}")
+        return bit_status
 
     def manage_bot(self):
         if self.bit_manager is not None:
