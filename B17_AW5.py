@@ -21,9 +21,8 @@ class AW5:
             self.bit_data.bot_data.set_flash('error', f"Failed to connect to AWS: {e}")
             raise e
 
-    def write_s3(self, path, filename, data):
+    def write_s3(self, bucket_name, s3_key, data):
         try:
-            bucket_name, s3_key = self._get_bucket_and_key(path, filename)
             self.bit_data.bot_data.set_flash('debug', f"write_s3: [bucket_name: {bucket_name}, s3_key: {s3_key}, data: {data}")
             self.s3.put_object(Body=data, Bucket=bucket_name, Key=s3_key)
             self.bit_data.bot_data.set_flash('info', f"File uploaded to {bucket_name}/{s3_key}")
@@ -34,9 +33,8 @@ class AW5:
             self.bit_data.bot_data.set_flash('error', f"write_s3 error occurred: {e}")
             raise e
 
-    def read_s3(self, path, filename):
+    def read_s3(self, bucket_name, s3_key):
         try:
-            bucket_name, s3_key = self._get_bucket_and_key(path, filename)
             response = self.s3.get_object(Bucket=bucket_name, Key=s3_key)
             data = response['Body'].read()
             self.bit_data.bot_data.set_flash('info', f"File downloaded from {bucket_name}/{s3_key}")
@@ -48,9 +46,8 @@ class AW5:
             self.bit_data.bot_data.set_flash('error', f"read_s3 error occurred: {e}")
             raise e
 
-    def delete_s3(self, path, filename):
+    def delete_s3(self, bucket_name, s3_key):
         try:
-            bucket_name, s3_key = self._get_bucket_and_key(path, filename)
             self.s3.delete_object(Bucket=bucket_name, Key=s3_key)
             self.bit_data.bot_data.set_flash('info', f"File deleted from {bucket_name}/{s3_key}")
         except NoCredentialsError:
@@ -61,11 +58,6 @@ class AW5:
         except Exception as e:
             self.bit_data.bot_data.set_flash('error', f"An error occurred during object deletion: {e}")
             raise e
-
-    def _get_bucket_and_key(self, bucket_name, filename):
-        # Here I'm assuming that the path format is /bucketname/filename
-        s3_key = "/".join([bucket_name, filename])
-        return bucket_name, s3_key
 
     async def test_s3(self, test_bucket, test_key, test_content):
         try:
@@ -79,6 +71,8 @@ class AW5:
             if read_content != test_content:
                 self.bit_data.bot_data.set_flash('debug', f"S3 test: read_content != test_content")
                 return False  # Something went wrong
+            else:
+                self.bit_data.bot_data.set_flash('debug', f"S3 test: read_content == test_content")
             # If the write and read both worked, delete the test file
             try:
                 self.delete_s3(test_bucket, test_key)

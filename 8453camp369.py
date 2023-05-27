@@ -281,7 +281,7 @@ async def tools_menu(bot_manager):
                             try:
                                 s3_test_result = await bot.bit_manager.aws_bit.test_s3(aws_bucket, test_key, test_content)
                                 if s3_test_result:
-                                    result = f"{i}. Bot {bot_name} can read from and write to S3 successfully."
+                                    result = f"{i}. Bot {bot_name} can successfully read, write, and delete using aws_bit."
                                     bot_manager.bot_data.set_flash('info', result)
                                 else:
                                     result = f"{i}. Bot {bot_name} failed the S3 read/write test."
