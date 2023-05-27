@@ -34,7 +34,7 @@ class B17:
         self.discord_bit = None
         self.telegram_bit = None
         self.openai_bit = None
-        self.bit_data.bot_data.set_flash('debug', f"{self.bot_name} constructed a new bit_manager.\nbit_switches: {self.bit_switches}")
+        self.bit_data.bot_data.set_flash('debug', f"{self.bot_name} constructed a new bit_manager. [bit_switches: {self.bit_switches}]")
 
     async def stop_active_bits(self):
         # Here you should implement the logic to stop any active bits
@@ -140,11 +140,16 @@ class B17:
             if 'aws_api' in self.bit_switches:
                 aws_access_key_id = self.bot._bit_auth()['aws_api']['access_key_id']
                 aws_secret_access_key = self.bot._bit_auth()['aws_api']['secret_access_key']
-                self.bit_data.bot_data.set_flash('debug', f"aws_secret_access_key: {aws_secret_access_key}")
                 try:
                     self.bit_data.bot_data.set_flash('debug', f"About to initialize AWS bit")
                     # Pass the bit_data instance to the AW5 class
-                    self.aws_bit = AW5(aws_access_key_id, aws_secret_access_key, self.bit_data)
+                    aws_region = self.bot_init_data.get('aws_region')
+                    self.bit_data.bot_data.set_flash('debug', f"AWS region: {aws_region}")
+                    if aws_region:
+                        self.aws_bit = AW5(aws_access_key_id, aws_secret_access_key, self.bit_data, aws_region)
+                    else:
+                        self.bit_data.bot_data.set_flash('debug', f"AWS region is not configured for {self.bot_name}. Please check the _init_{self.bot_name}.yaml file.")
+
                     self.bit_data.bot_data.set_flash('info', f"Initialized AWS bit")
                 except Exception as e:
                     self.bit_data.bot_data.set_flash('critical', f"Failed to initialize AWS bit: {str(e)}")

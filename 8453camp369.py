@@ -11,6 +11,7 @@ import sys
 import asyncio
 from typing import List, Dict
 import runpy
+import traceback
 
 # Import bot constructor class(es) here
 from B07 import B07
@@ -56,6 +57,20 @@ class Signal369:    # Bot Manager
         self.bot_data.set_flash('Debug', 'Available bots: ' + ', '.join(available_bots))
         return available_bots
 
+    def handle_bot_task_done(self, task):
+        try:
+            # Check if the task was cancelled
+            if task.cancelled():
+                self.bot_data.set_flash('info', f"Task was cancelled: {task}")
+                return
+            exc = task.exception()
+            if exc:
+                # Log the exception
+                self.bot_data.set_flash('error', f"Task threw an exception: {exc}")
+        except Exception as e:
+            # Catch any other unexpected errors
+            self.bot_data.set_flash('error', f"Error while handling done task: {e}")
+
     """
     Starts a specified bot by performing the following tasks:
 
@@ -99,12 +114,14 @@ class Signal369:    # Bot Manager
         try:
             discord_token = self.tokens.get(f"{bot_name}_discord_token")
             aws_secret_access_key = self.keys.get(f"{bot_name}_aws_secret_access_key")
-            aws_access_key_id = self.keys.get(f"{bot_name}_aws_access_key_id")
-
+            aws_access_key_id = bot_init_data.get("aws_access_key_id")
             openai_key = self.keys.get("openai_api_key")
             telegram_api_id = bot_init_data.get("telegram_api_id")
             telegram_api_hash = self.keys.get(f"{bot_name}_telegram_api_hash")
 
+            self.bot_data.set_flash('debug', f"Keys Dictionary: {self.keys}")
+            self.bot_data.set_flash('debug', f"aws_secret_access_key for {bot_name}: {aws_secret_access_key}")
+            self.bot_data.set_flash('debug', f"aws_access_key_id for {bot_name}: {aws_access_key_id}")
         except AttributeError as e:
             error_message = f"An attribute is missing for {bot_name}. Please check the bot's configuration, and the keys and tokens yaml files. {str(e)}"
             self.bot_data.set_flash('error', error_message)
@@ -113,30 +130,30 @@ class Signal369:    # Bot Manager
             error_message = f"A key property is missing for {bot_name}. Please check the bot's configuration, and the keys and tokens yaml files. {str(e)}"
             self.bot_data.set_flash('error', error_message)
             return error_message
+
+        if discord_token is None:
+            warning_message = f"The discord_token is set to None for {bot_name}. Please check the ___tokens__.yaml file."
+            self.bot_data.set_flash('warning', warning_message)
         else:
-            if discord_token is None:
-                warning_message = f"The discord_token is set to None for {bot_name}. Please check the ___tokens__.yaml file."
-                self.bot_data.set_flash('warning', warning_message)
-            else:
-                self.bot_data.set_flash('debug', f"Retrieved discord_token for {bot_name}.")
+            self.bot_data.set_flash('debug', f"Retrieved discord_token for {bot_name}.")
 
-            if aws_secret_access_key is None or aws_access_key_id is None:
-                warning_message = f"The aws_secret_access_key or aws_access_key_id is set to None for {bot_name}. Please check the ___keys__.yaml file."
-                self.bot_data.set_flash('warning', warning_message)
-            else:
-                self.bot_data.set_flash('debug', f"Retrieved AWS keys for {bot_name}.")
+        if aws_secret_access_key is None or aws_access_key_id is None:
+            warning_message = f"The aws_secret_access_key or aws_access_key_id is set to None for {bot_name}. Please check the ___keys__.yaml file."
+            self.bot_data.set_flash('warning', warning_message)
+        else:
+            self.bot_data.set_flash('debug', f"Retrieved AWS keys for {bot_name}.")
 
-            if openai_key is None:
-                warning_message = f"The openai_api_key is set to None for {bot_name}. Please check the ___keys__.yaml file."
-                self.bot_data.set_flash('warning', warning_message)
-            else:
-                self.bot_data.set_flash('debug', f"Retrieved openai_api_key for {bot_name}.")
+        if openai_key is None:
+            warning_message = f"The openai_api_key is set to None for {bot_name}. Please check the ___keys__.yaml file."
+            self.bot_data.set_flash('warning', warning_message)
+        else:
+            self.bot_data.set_flash('debug', f"Retrieved openai_api_key for {bot_name}.")
 
-            if telegram_api_id is None or telegram_api_hash is None:
-                warning_message = f"The Telegram api_id or api_hash is set to None for {bot_name}. Please check the _init_{bot_name}.yaml and the ___keys__.yaml files."
-                self.bot_data.set_flash('warning', warning_message)
-            else:
-                self.bot_data.set_flash('debug', f"Retrieved Telegram api_id and api_hash for {bot_name}.")
+        if telegram_api_id is None or telegram_api_hash is None:
+            warning_message = f"The Telegram api_id or api_hash is set to None for {bot_name}. Please check the _init_{bot_name}.yaml and the ___keys__.yaml files."
+            self.bot_data.set_flash('warning', warning_message)
+        else:
+            self.bot_data.set_flash('debug', f"Retrieved Telegram api_id and api_hash for  {bot_name}.")
 
         # Create and store the bot instance
         try:
@@ -169,8 +186,12 @@ class Signal369:    # Bot Manager
             self.bot_data.set_flash('info', f'{bot_name} started successfully')
 
     def handle_bot_task_done(self, task: asyncio.Task):
-        if task.exception():
-            self.bot_data.set_flash('error', f"Error starting bot task: {task.exception()}")
+        if task.cancelled():
+            self.bot_data.set_flash('info', f"Task was cancelled: {task}")
+        else:
+            exc = task.exception()
+            if exc:
+                self.bot_data.set_flash('error', f"Error starting bot task: {exc}")
 
     async def stop_bot(self, bot_name: str):
         bot = self.bots[bot_name]
@@ -249,16 +270,26 @@ async def tools_menu(bot_manager):
                         result = f"{i}. Bot {bot_name} has not initialized its AWS bit."
                         bot_manager.bot_data.set_flash('warning', result)
                     else:
-                        test_bucket = "your-test-bucket"
-                        test_key = "test-file.txt"
-                        test_content = "This is a test."
-                        s3_test_result = await bot.bit_manager.aws_bit.test_s3(test_bucket, test_key, test_content)
-                        if s3_test_result:
-                            result =f"{i}. Bot {bot_name} can read from and write to S3 successfully."
-                            bot_manager.bot_data.set_flash('info', result)
+                        bot_init_data = bot.bot_init_data
+                        aws_bucket = bot_init_data.get("aws_bucket", "")
+                        if not aws_bucket:
+                            warning_message = f"AWS bucket is not configured for {bot_name}. Please check the _init_{bot_name}.yaml file."
+                            bot_manager.bot_data.set_flash('warning', warning_message)
                         else:
-                            result = f"{i}. Bot {bot_name} failed the S3 read/write test."
-                            bot_manager.bot_data.set_flash('error', result)
+                            test_key = "test-file.txt"
+                            test_content = "This is a test."
+                            try:
+                                s3_test_result = await bot.bit_manager.aws_bit.test_s3(aws_bucket, test_key, test_content)
+                                if s3_test_result:
+                                    result = f"{i}. Bot {bot_name} can read from and write to S3 successfully."
+                                    bot_manager.bot_data.set_flash('info', result)
+                                else:
+                                    result = f"{i}. Bot {bot_name} failed the S3 read/write test."
+                                    bot_manager.bot_data.set_flash('error', result)
+                            except Exception as e:
+                                traceback.print_exc()
+                                error_message = f"An error occurred while testing S3 for Bot {bot_name}: {str(e)}"
+                                bot_manager.bot_data.set_flash('error', error_message)
 
                 # Display flash data whether or not an AWS test was attempted
                 print(bot_manager.bot_data.get_flash_and_reset())
@@ -523,7 +554,8 @@ async def main_menu(bot_manager):
             pass
 
         elif choice == "9":
-            sys.exit()
+            bot_manager.bot_data.set_flash('info', "Exit selected from Main Menu")
+            raise KeyboardInterrupt
 
         else:
                 warning_message = 'Invalid choice. Please try again.'
@@ -540,9 +572,16 @@ async def main():
     # Pass the instance to Signal369
     bot_manager = Signal369(bot_data)
   
-    while True:
-        #os.system('cls' if os.name == 'nt' else 'clear')
-        await main_menu(bot_manager)
+    try:
+        while True:
+            # os.system('cls' if os.name == 'nt' else 'clear')
+            await main_menu(bot_manager)
+    except KeyboardInterrupt:
+        # Cancel all running tasks on KeyboardInterrupt
+        tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task() and not t.done()]
+        for task in tasks:
+            task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
 
 if __name__ == "__main__":
     asyncio.run(main())

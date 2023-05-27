@@ -1,4 +1,5 @@
 # B07.py
+import asyncio
 from B07_B17 import B17
 
 class B07:
@@ -72,9 +73,14 @@ class B07:
             try:
                 if self.bit_manager is not None:
                     await self.bit_manager.manage_bits()
+            except asyncio.CancelledError:
+                # Log the cancellation
+                self.bot_data.set_flash('info', 'Bit manager was cancelled')
+                return
             except Exception as e:
                 self.bot_data.set_flash('critical', f"Bit manager crashed: {str(e)}")
-                # Handle error or restart
+                # Maybe restart the bit manager here?
+                self.start_bit_manager()
 
     async def close(self):
         # Check if the bit_manager exists

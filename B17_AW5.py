@@ -1,10 +1,10 @@
 #B17_AW5.py
 import boto3
-import logging
 from botocore.exceptions import NoCredentialsError, BotoCoreError
+from pathlib import Path
 
 class AW5:
-    def __init__(self, aws_access_key_id, aws_secret_access_key, bit_data, aws_region="us-west-1"):
+    def __init__(self, aws_access_key_id, aws_secret_access_key, bit_data, aws_region):
         self.aws_access_key_id = aws_access_key_id
         self.aws_secret_access_key = aws_secret_access_key
         self.bit_data = bit_data
@@ -24,13 +24,14 @@ class AW5:
     def write_s3(self, path, filename, data):
         try:
             bucket_name, s3_key = self._get_bucket_and_key(path, filename)
+            self.bit_data.bot_data.set_flash('debug', f"write_s3: [bucket_name: {bucket_name}, s3_key: {s3_key}, data: {data}")
             self.s3.put_object(Body=data, Bucket=bucket_name, Key=s3_key)
-            self.bit_data.bot_data.set_flash('debug', f"File uploaded to {bucket_name}/{s3_key}")
+            self.bit_data.bot_data.set_flash('info', f"File uploaded to {bucket_name}/{s3_key}")
         except NoCredentialsError:
             self.bit_data.bot_data.set_flash('error', "Credentials not available")
             raise
         except Exception as e:
-            self.bit_data.bot_data.set_flash('error', f"An error occurred: {e}")
+            self.bit_data.bot_data.set_flash('error', f"write_s3 error occurred: {e}")
             raise e
 
     def read_s3(self, path, filename):
@@ -38,49 +39,60 @@ class AW5:
             bucket_name, s3_key = self._get_bucket_and_key(path, filename)
             response = self.s3.get_object(Bucket=bucket_name, Key=s3_key)
             data = response['Body'].read()
-            logging.info(f"File downloaded from {bucket_name}/{s3_key}")
+            self.bit_data.bot_data.set_flash('info', f"File downloaded from {bucket_name}/{s3_key}")
             return data
         except NoCredentialsError:
-            logging.error("Credentials not available")
+            self.bit_data.bot_data.set_flash('error', "Credentials not available")
             raise
         except Exception as e:
-            logging.error(f"An error occurred: {e}")
+            self.bit_data.bot_data.set_flash('error', f"read_s3 error occurred: {e}")
             raise e
 
     def delete_s3(self, path, filename):
         try:
             bucket_name, s3_key = self._get_bucket_and_key(path, filename)
             self.s3.delete_object(Bucket=bucket_name, Key=s3_key)
-            logging.info(f"File deleted from {bucket_name}/{s3_key}")
+            self.bit_data.bot_data.set_flash('info', f"File deleted from {bucket_name}/{s3_key}")
         except NoCredentialsError:
-            logging.error("Credentials not available")
+            self.bit_data.bot_data.set_flash('error', "Credentials not available")
             raise
+        except self.s3.exceptions.NoSuchKey:
+            self.bit_data.bot_data.set_flash('warning', f"Object {s3_key} does not exist in {bucket_name}")
         except Exception as e:
-            logging.error(f"An error occurred: {e}")
+            self.bit_data.bot_data.set_flash('error', f"An error occurred during object deletion: {e}")
             raise e
 
-    def _get_bucket_and_key(self, path, filename):
-        # Here I'm assuming that the path format is /bucketname/keypath
-        bucket_name = path.parts[1]
-        key_parts = list(path.parts[2:]) + [filename]
-        s3_key = "/".join(key_parts)
+    def _get_bucket_and_key(self, bucket_name, filename):
+        # Here I'm assuming that the path format is /bucketname/filename
+        s3_key = "/".join([bucket_name, filename])
         return bucket_name, s3_key
 
     async def test_s3(self, test_bucket, test_key, test_content):
         try:
+            self.bit_data.bot_data.set_flash('debug', f"S3 test: [test_bucket: {test_bucket}, test_key: {test_key}, test_content: {test_content}")
             # Write the file
             self.write_s3(test_bucket, test_key, test_content)
             # Read the file back
-            read_content = self.read_s3(test_bucket, test_key)
-
+            read_content_bytes = self.read_s3(test_bucket, test_key)
+            read_content = read_content_bytes.decode()  # Decode bytes to string
+            self.bit_data.bot_data.set_flash('debug', f"S3 test: read_content = {read_content}")
             if read_content != test_content:
+                self.bit_data.bot_data.set_flash('debug', f"S3 test: read_content != test_content")
                 return False  # Something went wrong
-
             # If the write and read both worked, delete the test file
-            self.delete_s3(test_bucket, test_key)
-            logging.debug(f"S3 test passed for {test_bucket}/{test_key}")
+            try:
+                self.delete_s3(test_bucket, test_key)
+                self.bit_data.bot_data.set_flash('debug', f"delete_s3 test passed for {test_bucket}/{test_key}")
+            except NoCredentialsError:
+                self.bit_data.bot_data.set_flash('error', "Credentials not available")
+                return False
+            except self.s3.exceptions.NoSuchKey:
+                self.bit_data.bot_data.set_flash('warning', f"Object {test_key} does not exist in {test_bucket}")
+            except Exception as e:
+                self.bit_data.bot_data.set_flash('error', f"An error occurred during S3 test: {e}")
+                return False
         except Exception as e:
-            logging.error(f"An error occurred during S3 test: {e}")
+            self.bit_data.bot_data.set_flash('error', f"An error occurred during S3 test: {e}")
             return False
         return True
 

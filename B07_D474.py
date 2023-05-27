@@ -6,7 +6,7 @@ import yaml
 logging.basicConfig(filename='z.log', 
                     filemode='a', 
                     format='%(asctime)s - %(levelname)s - %(message)s',
-                    level=logging.DEBUG)
+                    level=logging.INFO)
 
 class D474:
     def __init__(self):
