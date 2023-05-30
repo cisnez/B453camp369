@@ -19,31 +19,31 @@
 
 #B07_B17.py
 # Bit Manager
-from B17_D474 import D474
 from B17_AW5 import AW5
 
 class B17:
-    def __init__(self, bot, bit_switches, bit_auth, bot_init_data, bot_data):
+    def __init__(self, bot, secrets, data, bot_init_data, bit_switches, bit_auth):
+        self.secrets = secrets
         self.bot = bot
-        self.bot_name = bot.bot_name
+        self.bot_name = self.bot.bot_name
+        self.data = data
+        self.bot_init_data = bot_init_data
         self.bit_switches = bit_switches
         self.bit_auth = bit_auth
-        self.bot_init_data = bot_init_data
-        self.bit_data = D474(bot_data)
         self.aws_bit = None
         self.discord_bit = None
         self.telegram_bit = None
         self.openai_bit = None
-        self.bit_data.bot_data.set_flash('debug', f"{self.bot_name} constructed a new bit_manager. [bit_switches: {self.bit_switches}]")
+        self.data.set_flash('debug', f"{self.bot_name} constructed a new bit_manager. [bit_switches: {self.bit_switches}]")
 
     async def stop_active_bits(self):
         # Here you should implement the logic to stop any active bits
-        self.bit_data.bot_data.set_flash('debug', f"Passing through `stop_active_bits`.")
+        self.data.set_flash('debug', f"Passing through `stop_active_bits`.")
         pass
 
     async def cleanup(self):
         # Here you should implement the logic to clean up any resources related to bits
-        self.bit_data.bot_data.set_flash('debug', f"Passing through `cleanup`.")
+        self.data.set_flash('debug', f"Passing through `cleanup`.")
         pass
 
     async def manage_bits(self):
@@ -60,27 +60,27 @@ class B17:
                 elif bit == 'telegram_api':
                     await self.manage_telegram()
                 # Add more elif conditions for other bits.
-        self.bit_data.bot_data.set_flash('debug', f"Passing through `manage_bits`.")
+        self.data.set_flash('debug', f"Passing through `manage_bits`.")
 
     async def manage_aws(self):
         if self.aws_bit is None:
             self._init_aws()
-            self.bit_data.bot_data.set_flash('debug', f"Passing through `manage_aws`.")
+            self.data.set_flash('debug', f"Passing through `manage_aws`.")
             pass
 
     async def manage_discord(self):
         # Implement your Discord bot logic here.
-        self.bit_data.bot_data.set_flash('debug', f"Passing through `manage_discord`.")
+        self.data.set_flash('debug', f"Passing through `manage_discord`.")
         pass
 
     async def manage_telegram(self):
         # Implement your Discord bot logic here.
-        self.bit_data.bot_data.set_flash('debug', f"Passing through `manage_discord`.")
+        self.data.set_flash('debug', f"Passing through `manage_discord`.")
         pass
 
     async def manage_openai(self):
         # Implement your OpenAI logic here.
-        self.bit_data.bot_data.set_flash('debug', f"Passing through `manage_openai`.")
+        self.data.set_flash('debug', f"Passing through `manage_openai`.")
         pass
 
     # You can add more manage_X methods for other bits.
@@ -100,12 +100,12 @@ class B17:
                         self._init_aws()
                     elif bit_name == 'openai_api':
                         self._init_openai()
-                    self.bit_data.bot_data.set_flash('info', f"Initialized {bit_name} bit")
+                    self.data.set_flash('info', f"Initialized {bit_name} bit")
                 except Exception as e:
-                    self.bit_data.bot_data.set_flash('error', f"Failed to initialize {bit_name} bit: {str(e)}")
+                    self.data.set_flash('error', f"Failed to initialize {bit_name} bit: {str(e)}")
 
     def init_bit(self, bit_name):
-        self.bit_data.bot_data.set_flash('debug', f"Entering init_bit with: {bit_name}")
+        self.data.set_flash('debug', f"Entering init_bit with: {bit_name}")
         if bit_name in self.bit_switches:
             try:
                 if bit_name == 'discord_api':
@@ -113,54 +113,54 @@ class B17:
                 elif bit_name == 'telegram_api':
                     self._init_telegram()
                 elif bit_name == 'aws_api':
-                    self.bit_data.bot_data.set_flash('debug', f"Passing through `aws_api`.")
+                    self.data.set_flash('debug', f"Passing through `aws_api`.")
                     self._init_aws()
-                    self.bit_data.bot_data.set_flash('debug', f"Passed through `_init_aws` in `aws_api`.")
+                    self.data.set_flash('debug', f"Passed through `_init_aws` in `aws_api`.")
                 elif bit_name == 'openai_api':
                     self._init_openai()
-                self.bit_data.bot_data.set_flash('info', f"Initialized {bit_name} bit")
+                self.data.set_flash('info', f"Initialized {bit_name} bit")
             except Exception as e:
-                self.bit_data.bot_data.set_flash('error', f"Failed to initialize {bit_name} bit: {str(e)}")
+                self.data.set_flash('error', f"Failed to initialize {bit_name} bit: {str(e)}")
         else:
-            self.bit_data.bot_data.set_flash('warning', f"bit_name: {bit_name} not found in bit.bit_switches")
+            self.data.set_flash('warning', f"bit_name: {bit_name} not found in bit.bit_switches")
 
     def _init_discord(self):
         # Implement Discord initialization here.
-        self.bit_data.bot_data.set_flash('debug', f"Passing through `_init_discord`.")
+        self.data.set_flash('debug', f"Passing through `_init_discord`.")
         pass
 
     def _init_telegram(self):
         # Implement Discord initialization here.
-        self.bit_data.bot_data.set_flash('debug', f"Passing through `_init_telegram`.")
+        self.data.set_flash('debug', f"Passing through `_init_telegram`.")
         pass
 
     def _init_aws(self):
-        self.bit_data.bot_data.set_flash('debug', f"Entering `_init_aws` in `aws_api`.")
+        self.data.set_flash('debug', f"Entering `_init_aws` in `aws_api`.")
         try: 
             if 'aws_api' in self.bit_switches:
                 aws_access_key_id = self.bot._bit_auth()['aws_api']['access_key_id']
                 aws_secret_access_key = self.bot._bit_auth()['aws_api']['secret_access_key']
                 try:
-                    self.bit_data.bot_data.set_flash('debug', f"About to initialize AWS bit")
+                    self.data.set_flash('debug', f"About to initialize AWS bit")
                     # Pass the bit_data instance to the AW5 class
                     aws_region = self.bot_init_data.get('aws_region')
-                    self.bit_data.bot_data.set_flash('debug', f"AWS region: {aws_region}")
+                    self.data.set_flash('debug', f"AWS region: {aws_region}")
                     if aws_region:
-                        self.aws_bit = AW5(aws_access_key_id, aws_secret_access_key, self.bit_data, aws_region)
+                        self.aws_bit = AW5(self.secrets, self.data, aws_access_key_id, aws_secret_access_key, aws_region)
                     else:
-                        self.bit_data.bot_data.set_flash('debug', f"AWS region is not configured for {self.bot_name}. Please check the _init_{self.bot_name}.yaml file.")
+                        self.data.set_flash('debug', f"AWS region is not configured for {self.bot_name}. Please check the _init_{self.bot_name}.yaml file.")
 
-                    self.bit_data.bot_data.set_flash('info', f"Initialized AWS bit")
+                    self.data.set_flash('info', f"Initialized AWS bit")
                 except Exception as e:
-                    self.bit_data.bot_data.set_flash('critical', f"Failed to initialize AWS bit: {str(e)}")
+                    self.data.set_flash('critical', f"Failed to initialize AWS bit: {str(e)}")
         except Exception as e:
-            self.bit_data.bot_data.set_flash('critical', f"Unable to access bot._bit_auth method: {str(e)}")
+            self.data.set_flash('critical', f"Unable to access bot._bit_auth method: {str(e)}")
         finally:
-            self.bit_data.bot_data.set_flash('debug', f"Exiting `_init_aws` in `aws_api`.")
+            self.data.set_flash('debug', f"Exiting `_init_aws` in `aws_api`.")
 
     def _init_openai(self):
         # Implement OpenAI initialization here.
-        self.bit_data.bot_data.set_flash('debug', f"Passing through `_init_openai`.")
+        self.data.set_flash('debug', f"Passing through `_init_openai`.")
         pass
 
     # You can add more init_X methods for other bits.

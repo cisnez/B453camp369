@@ -3,10 +3,11 @@ import asyncio
 from B07_B17 import B17
 
 class B07:
-    def __init__(self, bot_name, openai_api_key, discord_token, telegram_api_id, telegram_api_hash, aws_secret_access_key, aws_access_key_id, bot_init_data, bot_data):
+    def __init__(self, secrets, data, bot_name, bot_init_data, openai_api_key, discord_token, telegram_api_id, telegram_api_hash, aws_secret_access_key, aws_access_key_id):
+        self.secrets = secrets
+        self.data = data
         self.bot_name = bot_name
         self.bot_init_data = bot_init_data
-        self.bot_data = bot_data
         self.leet_name = bot_init_data["7331eman"]
         # Set bot properties in dictionary
         self.properties = {
@@ -19,9 +20,9 @@ class B07:
         }
 
         try:
-            self.bit_manager = B17(self, self._bit_switches(), self._bit_auth(), bot_init_data, self.bot_data)
+            self.bit_manager = B17(self, self.secrets, self.data, bot_init_data, self._bit_switches(), self._bit_auth())
         except Exception as e:
-            self.bot_data.set_flash('critical', f"Bot failed to instantiate bit_manager: {str(e)}")
+            self.data.set_flash('critical', f"Bot failed to instantiate bit_manager: {str(e)}")
 
     def _bit_auth(self):
         return {
@@ -61,7 +62,7 @@ class B07:
             "telegram_api": self.bit_manager.telegram_bit is not None,
             "openai_api": self.bit_manager.openai_bit is not None
         }
-        self.bot_data.set_flash('debug', f"Bit statuses for bot {self.bot_name}: {bit_status}")
+        self.data.set_flash('debug', f"Bit statuses for bot {self.bot_name}: {bit_status}")
         return bit_status
 
     def manage_bot(self):
@@ -75,10 +76,10 @@ class B07:
                     await self.bit_manager.manage_bits()
             except asyncio.CancelledError:
                 # Log the cancellation
-                self.bot_data.set_flash('info', 'Bit manager was cancelled')
+                self.data.set_flash('info', 'Bit manager was cancelled')
                 return
             except Exception as e:
-                self.bot_data.set_flash('critical', f"Bit manager crashed: {str(e)}")
+                self.data.set_flash('critical', f"Bit manager crashed: {str(e)}")
                 # Maybe restart the bit manager here?
                 self.start_bit_manager()
 
@@ -95,9 +96,9 @@ class B07:
                 # Remove the bit_manager object
                 self.bit_manager = None
 
-                self.bot_data.set_flash('info', f'Bot `{self.leet_name}` has been closed.')
+                self.data.set_flash('info', f'Bot `{self.leet_name}` has been closed.')
             except Exception as e:
-                self.bot_data.set_flash('critical', f"Error closing bot `{self.leet_name}`: {str(e)}")
+                self.data.set_flash('critical', f"Error closing bot `{self.leet_name}`: {str(e)}")
                 raise e
 
 # The Single Responsibility Principle (SRP), as part of SOLID principles, asserts that a class should have only one responsibility, or in other words, it should have only one reason to change. The intention is to make the software system easier to maintain and more robust against bugs.
