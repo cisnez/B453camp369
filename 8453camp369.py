@@ -229,10 +229,25 @@ class Signal369: #bot_manager
 
         # Create and store the bot instance
         try:
-            bot = B07(self.secrets, self.data, bot_name, bot_init_data, openai_key, discord_token, telegram_api_id, telegram_api_hash, aws_secret_access_key, aws_access_key_id)
+            self.data.set_flash('debug', f"{type(bot_name)}: bot_name")
+            self.data.set_flash('debug', f"{type(self.bot_tasks)}: self.bot_tasks")
+            self.data.set_flash('debug', f"{type(self.secrets)}: self.secrets")
+            self.data.set_flash('debug', f"{type(self.data)}: self.data")
+            self.data.set_flash('debug', f"{type(bot_init_data)}: bot_init_data")
+            self.data.set_flash('debug', f"{type(openai_key)}: openai_key")
+            self.data.set_flash('debug', f"{type(discord_token)}: iscord_token")
+            # self.data.set_flash('debug', f"{type(telegram_api_id)}: telegram_api_id")
+            # self.data.set_flash('debug', f"{type(telegram_api_hash)}: telegram_api_hash")
+            # self.data.set_flash('debug', f"{type(aws_secret_access_key)}: aws_secret_access_key")
+            # self.data.set_flash('debug', f"{type(aws_access_key_id)}: aws_access_key_id")
 
-            # Create bot task and handle done task
-            task = asyncio.create_task(bot.start_bit_manager())
+            # Instantiate the bot
+            bot = B07(asyncio.get_event_loop(), self.secrets, self.data, bot_name, bot_init_data, openai_key, discord_token, telegram_api_id, telegram_api_hash, aws_secret_access_key, aws_access_key_id)
+
+            # Create the task from the coroutine
+            task = asyncio.create_task(bot.start_bit_manager(), name=bot_name)
+
+            # Add the bot task to the bot_tasks dict
             self.bot_tasks[bot_name] = task
             task.add_done_callback(self.handle_bot_task_done)
 
@@ -539,6 +554,7 @@ async def connect_bit(bot_manager):
             print("3. Start Telegram")
             print("4. Start AWS")
             print("5. Start OpenAi")
+            print("6. Start all available bits")
 
             print(bot_manager.data.get_flash_and_reset())
 
@@ -549,20 +565,24 @@ async def connect_bit(bot_manager):
                     break
                 elif choice == "2":
                     # Initialize the Discord bit
-                    bot.bit_manager.init_bit('discord_api')
-                    bot.data.set_flash('debug', 'Instantiating Discord Bit')
+                    await bot.bit_manager.init_bit('discord_api')
+                    bot.data.set_flash('debug', 'Instantiated Discord Bit')
                 elif choice == "3":
                     # Initialize the Telegram bit
-                    bot.bit_manager.init_bit('telegram_api')
-                    bot.data.set_flash('debug', 'Instantiating Telegram Bit')
+                    await bot.bit_manager.init_bit('telegram_api')
+                    bot.data.set_flash('debug', 'Instantiated Telegram Bit')
                 elif choice == "4":
                     # Initialize the AWS bit
                     bot.bit_manager.init_bit('aws_api')
-                    bot.data.set_flash('debug', 'Instantiating AWS Bit')
+                    bot.data.set_flash('debug', 'Instantiated AWS Bit')
                 elif choice == "5":
                     # Initialize the OpenAi bit
-                    bot.bit_manager.init_bit('openai_api')
-                    bot.data.set_flash('debug', 'Instantiating OpenAi Bit')
+                    await bot.bit_manager.init_bit('openai_api')
+                    bot.data.set_flash('debug', 'Instantiated OpenAi Bit')
+                elif choice == "6":
+                    # Initialize the all available bits
+                    await bot.bit_manager.init_bits()
+                    bot.data.set_flash('debug', 'Instantiated all available bits')
                 else:
                     warning_message = 'Invalid choice. Please try again.'
                     bot.data.set_flash('warning', warning_message)

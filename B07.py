@@ -3,7 +3,8 @@ import asyncio
 from B07_B17 import B17
 
 class B07:
-    def __init__(self, secrets, data, bot_name, bot_init_data, openai_api_key, discord_token, telegram_api_id, telegram_api_hash, aws_secret_access_key, aws_access_key_id):
+    def __init__(self, loop, secrets, data, bot_name, bot_init_data, openai_api_key, discord_token, telegram_api_id, telegram_api_hash, aws_secret_access_key, aws_access_key_id):
+        self.loop = loop
         self.secrets = secrets
         self.data = data
         self.bot_name = bot_name
@@ -13,33 +14,66 @@ class B07:
         self.properties = {
             "openai_api_key": openai_api_key,
             "discord_token": discord_token,
+            "discord_id": self.bot_init_data["self_author_id"],
             "telegram_api_id": telegram_api_id,
             "telegram_api_hash": telegram_api_hash,
             "aws_secret_access_key": aws_secret_access_key,
             "aws_access_key_id": aws_access_key_id,
         }
-
+        self.bit_manager = None  # ensure self.bit_manager is always defined
         try:
-            self.bit_manager = B17(self, self.secrets, self.data, bot_init_data, self._bit_switches(), self._bit_auth())
+            self.bit_manager = B17(self, self.loop, self.secrets, self.data, self.bot_name, self.bot_init_data, self._bit_switches(), self._bit_auth())
         except Exception as e:
             self.data.set_flash('critical', f"Bot failed to instantiate bit_manager: {str(e)}")
 
+    async def start_bit_manager(self):
+        pass
+        retry_delay = 1  # or whatever initial delay you want
+        while True:
+            try:
+                if self.bit_manager is not None:
+                    await self.bit_manager.manage_bits()
+                    # If we get here without an exception, reset the retry delay
+                    retry_delay = 1
+            except asyncio.CancelledError:
+                # Log the cancellation
+                self.data.set_flash('info', 'Bit manager was cancelled')
+                return
+            except Exception as e:
+                self.data.set_flash('critical', f"Bit manager crashed: {str(e)}")
+                # Increase the delay for each retry, to a maximum of (say) 60 seconds
+                retry_delay = min(retry_delay * 2, 60)
+                await asyncio.sleep(retry_delay)  # Wait before retrying
+
     def _bit_auth(self):
         return {
-            "openai_api": self.properties["openai_api_key"],
-            "discord_api": self.properties["discord_token"],
+            "openai_api": {
+                "api_key": self.properties["openai_api_key"]
+            },
+            "discord_api": {
+                "bot_token": self.properties["discord_token"],
+                "bot_id": self.properties["discord_id"]
+            },
             "telegram_api": {
                 "api_id": self.properties["telegram_api_id"],
                 "api_hash": self.properties["telegram_api_hash"]
             },
             "aws_api": {
                 "access_key_id": self.properties["aws_access_key_id"],
-                "secret_access_key": self.properties["aws_secret_access_key"],
+                "secret_access_key": self.properties["aws_secret_access_key"]
             },
-            "txt2txt_api": None,
-            "txt2img_api": None,
-            "img2txt_api": None,
-            "img2img_api": None
+            "txt2txt_api": {
+                "api_key": None
+            },
+            "txt2img_api": {
+                "api_key": None
+            },
+            "img2txt_api": {
+                "api_key": None
+            },
+            "img2img_api": {
+                "api_key": None
+            }
         }
 
     def _bit_switches(self):
@@ -53,6 +87,7 @@ class B07:
             "img2txt_api": False,
             "img2img_api": None is not None
         }
+
     # _bit_switches checks if the bot has the necessary "ingredients" to initialize a bit, while get_bit_status checks if the bot has successfully used those "ingredients" to create a functioning bit.
     def get_bit_status(self):
         # Flash bit statuses
@@ -68,20 +103,6 @@ class B07:
     def manage_bot(self):
         if self.bit_manager is not None:
             self.bit_manager.manage_bits()
-
-    async def start_bit_manager(self):
-        while True:
-            try:
-                if self.bit_manager is not None:
-                    await self.bit_manager.manage_bits()
-            except asyncio.CancelledError:
-                # Log the cancellation
-                self.data.set_flash('info', 'Bit manager was cancelled')
-                return
-            except Exception as e:
-                self.data.set_flash('critical', f"Bit manager crashed: {str(e)}")
-                # Maybe restart the bit manager here?
-                self.start_bit_manager()
 
     async def close(self):
         # Check if the bit_manager exists

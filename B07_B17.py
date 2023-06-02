@@ -22,11 +22,12 @@
 from B17_AW5 import AW5
 
 class B17:
-    def __init__(self, bot, secrets, data, bot_init_data, bit_switches, bit_auth):
-        self.secrets = secrets
+    def __init__(self, bot, loop, secrets, data, bot_name, bot_init_data, bit_switches, bit_auth):
         self.bot = bot
-        self.bot_name = self.bot.bot_name
+        self.loop = loop
+        self.secrets = secrets
         self.data = data
+        self.bot_name = bot_name
         self.bot_init_data = bot_init_data
         self.bit_switches = bit_switches
         self.bit_auth = bit_auth

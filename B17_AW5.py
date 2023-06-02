@@ -18,6 +18,7 @@ class AW5:
                 aws_access_key_id=self.aws_access_key_id,
                 aws_secret_access_key=self.aws_secret_access_key,
             )
+            self.data.set_flash('debug', f"AW5 constructor trying `self.s3 = boto3.client()`")
         except BotoCoreError as e:
             self.data.set_flash('error', f"Failed to connect to AWS: {e}")
             raise e

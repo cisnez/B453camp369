@@ -5,7 +5,7 @@ import logging
 logging.basicConfig(filename='z.log', 
                     filemode='a', 
                     format='%(asctime)s - %(levelname)s - %(message)s',
-                    level=logging.INFO)
+                    level=logging.DEBUG)
 
 class D474:
     """

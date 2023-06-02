@@ -10,10 +10,8 @@ ZAP = "249"
 ZOP = "209"
 
 class D15C0RD(commands.Bot):
-    def __init__(self, bot, Message):
-        self.bot = bot
-        self.message_queue = bot.message_queue
-        self.Message = Message
+    def __init__(self, data, bot_init_data):
+        self.bot_init_data = bot_init_data
         self.flash_data = bot.flash_data
         self.discord_token = bot.discord_token
 
@@ -25,7 +23,7 @@ class D15C0RD(commands.Bot):
     async def start(self):
         await super().start(self.discord_token)
         await self.message_queue.put(self.Message(ZIP, "game"))
-        self.flash_data.set(ZIP)  # Use the set method
+        self.data.flash_set(ZIP)  # Use the set method
 
     async def close(self):
         await super().close()
@@ -35,7 +33,7 @@ class D15C0RD(commands.Bot):
         if home_channel is not None:
             await home_channel.send("Honey! I'm home!")
         else:
-            self.flash_data.set(f"Error: Could not find a channel with ID {self.bot.home_channel_id}")  # Use the set method
+            self.data.flash_set(f"Error: Could not find a channel with ID {self.bot.home_channel_id}")  # Use the set method
             print(f"Error: Could not find a channel with ID {self.bot.home_channel_id}")
             quit()
 
@@ -46,10 +44,10 @@ class D15C0RD(commands.Bot):
                 print(f"Processing game message: {message.content}")
                 if message.content == ZIP:
                     await self.message_queue.put(self.Message(ZAP, "game"))
-                    self.flash_data.set(ZAP)  # Use the set method
+                    self.data.flash_set(ZAP)  # Use the set method
                 elif message.content == ZAP:
                     await self.message_queue.put(self.Message(ZOP, "game"))
-                    self.flash_data.set(ZOP)  # Use the set method
+                    self.data.flash_set(ZOP)  # Use the set method
                 elif message.content == ZOP:
                     print("Game sequence successful")
             else:
