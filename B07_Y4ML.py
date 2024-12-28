@@ -38,8 +38,25 @@ class Y4ML:
         for file_path in file_paths:
             with open(file_path, "r", encoding='utf-8') as f:
                 data = yaml.safe_load(f)
-                merged_data = {**merged_data, **data}
-                self.data.set_flash('debug', "Returning Dictionary of Merged YAML")
+                for key, value in data.items():
+                    if key not in merged_data:
+                        merged_data[key] = value
+                    else:
+                        if value is None:  # If the value is None, do nothing.
+                            pass
+                        elif isinstance(value, list):
+                            if merged_data[key] is None:
+                                merged_data[key] = value
+                            else:
+                                merged_data[key] += value
+                        elif isinstance(value, dict):
+                            if merged_data[key] is None:
+                                merged_data[key] = value
+                            else:
+                                merged_data[key].update(value)
+                        else:  # If the value is not None, list, or dict, set the value.
+                            merged_data[key] = value
+        logging.debug(f"Returning Dictionary of Merged YAML:\n{file_paths}")
         return merged_data
 
     def load_yaml_file(self, filename):
